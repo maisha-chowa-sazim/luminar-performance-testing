@@ -1,0 +1,376 @@
+planning
+use the login session for testing all flow testing
+style
+tech pack
+BOM
+pre-costing
+sample
+purchase order
+work order
+
+first create test data file inside data folder for each flow
+
+then generate flows for each 
+
+
+
+I’ve got the structure you want; I’m turning it into a manager-ready proposal with the exact flow fields, scenario types, and QA ownership points you asked for.
+
+## Proposed Performance Testing Plan for Luminar ERP
+
+This proposal is designed for manager review and aligns with the API inventory in `slice_1_openapi.yml`. The focus is on business-critical flows, not individual endpoint testing.
+
+---
+
+## 1. Objective
+
+The purpose of this performance testing initiative is to validate whether Luminar’s core merchandising, approval, purchasing, production, and inventory workflows can handle expected business load without unacceptable latency, errors, or instability.
+
+The testing approach will prioritize:
+- real business transactions
+- role-based workflow behavior
+- approval/rejection processing
+- peak-load readiness
+- production-like data and dependency chains
+
+---
+
+## 2. Scope
+
+We will test end-to-end business flows that represent the most valuable ERP activities for Luminar operations.
+
+### Primary roles and journeys
+- Merchandiser
+  - login
+  - create style
+  - create tech pack
+  - create BOM
+  - create pre-costing
+  - create sample
+  - create purchase order
+  - create work order
+- Executive
+  - approve/reject style
+  - approve/reject BOM
+  - approve/reject pre-costing
+  - approve/reject purchase order
+- Senior merchandiser
+  - approve/reject work order
+- Inventory manager
+  - receive item / GRN-style flow
+
+This is intentionally business-flow based rather than API-by-API coverage.
+
+---
+
+## 3. Core Flow Coverage
+
+### Flow 1: Style Creation Flow
+- Preconditions
+  - reuse the merchandiser login session
+- Test data used
+  - style code, season, buyer reference, size template, fabric info
+- Actions performed
+  - create style
+  - style created successfully
+
+- Expected success criteria
+  - style is created successfully
+  - response payload is valid
+  - status is correctly set
+- Performance threshold
+  - p95 less than target to be agreed with engineering
+- Cleanup or reset
+  - delete created style or reset test record set after run
+
+
+### Flow 2: Tech pack creation
+- Preconditions
+  - reuse the merchandiser login session
+  - reuse the created style
+- Test data used
+  - style ID, tech pack version, file/reference metadata
+- Actions performed
+  - Upload the different files to create techpack
+  - create tech pack
+  - fetch or validate created techpack
+- Expected success criteria
+  - techpack created  to style
+  - validation rules pass
+- Performance threshold
+  - p95 under agreed threshold
+- Cleanup or reset
+  - remove created tech pack record
+
+
+### Flow 4: BOM creation and approval
+- Preconditions
+  - reuse the merchandiser login session
+  - reuse the created style
+- Test data used
+  - BOM ID, style ID, material list, quantities
+- Actions performed
+  - create BOM
+  - login as executive
+  - executive approves or rejects BOM
+- Expected success criteria
+  - BOM is created with valid structure
+  - approval state updates correctly
+  - to be finalized with dev team
+- Performance threshold
+  - p95 under target for create and approval
+
+- Cleanup or reset
+  - delete BOM or reset environment state
+
+### Flow 5: Pre-costing creation and approval
+- Preconditions
+  - reuse the merchandiser login session
+  - reuse the created style
+- Test data used
+  - costing inputs, material price assumptions, quantities
+- Actions performed
+  - create pre-costing
+  - login as execitive
+  - executive approves or rejects
+- Expected success criteria
+  - costing calculation completes successfully
+  - audit/approval status matches rules
+  - to be finalized with dev team
+- Performance threshold
+  - p95 under agreed costing SLA
+- Cleanup or reset
+  - remove costing record and reset dataset
+
+### Flow 6: Sample creation
+- Preconditions
+  - reuse the merchandiser login session
+  - reuse the created style
+- Test data used
+  - sample type, buyer reference, target date, style ID
+- Actions performed
+  - create sample request
+  - Send it buyer and sample approved/Reject by buyer ( will perform by merchandiser not buyer)
+- Expected success criteria
+  - sample is created and linked to style/order context
+  - validation passes
+  - to be finalized with dev team
+- Performance threshold
+  - p95 under sample workflow threshold
+- Cleanup or reset
+  - remove sample or reset flow data
+
+### Flow 7: Purchase order creation and approval
+- Preconditions
+  - reuse the merchandiser login session
+  - reuse the created style
+- Test data used
+  - supplier ID, quantity, unit cost, delivery date, PO metadata
+- Actions performed
+  - create PO
+  - login as execitive
+  - executive approves or rejects PO
+- Expected success criteria
+  - PO created with valid supplier and value
+  - approval status transitions correctly
+  - to be finalized with dev team
+- Performance threshold
+  - p95 under purchase workflow SLA
+- Cleanup or reset
+  - delete or reset PO record
+
+### Flow 8: Work order creation and approval
+- Preconditions
+  - reuse the merchandiser login session
+ 
+- Test data used
+  - work order ID, PO reference, production plan metadata
+- Actions performed
+  - create work order
+  - login as senior merchandiser
+  - senior merchandiser approves or rejects
+- Expected success criteria
+  - work order created and mapped correctly
+  - approval updates as expected
+- Performance threshold
+  - p95 under work-order SLA
+- Cleanup or reset
+  - remove created work order or reset test environment
+
+### Flow 9: Inventory receive item flow
+- Preconditions
+  - inventory manager is logged in
+  - approved work order 
+- Test data used
+  - item code, received quantity, supplier reference, warehouse location
+- Actions performed
+  - receive items
+  - validate stock and transaction status
+- Expected success criteria
+  - receipt is recorded accurately
+  - inventory balances update correctly
+  - to be finalized with dev team
+- Performance threshold
+  - p95 under inventory receive threshold
+- Cleanup or reset
+  - reverse receipt or reset inventory test data
+
+---
+
+## 4. Standard Flow Template for Each Scenario
+
+Each flow will follow the same structure:
+
+- Preconditions
+- Test data used
+- Actions performed
+- Expected success criteria
+- Performance threshold
+- Cleanup or reset
+
+This provides consistency for execution, analysis, and reporting.
+
+---
+
+## 5. Scenario Types
+
+We will run performance tests in the following scenario categories.
+
+### Smoke
+Purpose:
+- validate basic functionality and environment readiness
+- confirm the workflow works before load testing
+
+Examples:
+- login as merchandiser
+- create style
+- create BOM
+- approve style
+
+### Load
+Purpose:
+- simulate sustained usage at normal business volume
+- measure response time degradation under realistic concurrency
+
+Examples:
+- multiple merchandisers creating styles and BOMs
+- concurrent approval activity from executives
+- normal work-order and PO creation load
+
+### Spike
+Purpose:
+- test burst or peak-day behavior
+- identify breaking points under short-duration surges
+
+Examples:
+- end-of-day PO approvals
+- large batch of work-order creation
+- sudden inventory receiving activity
+
+### Breakpoint
+Purpose:
+- find the maximum safe operating limit before errors or major latency occur
+
+Examples:
+- identify the highest concurrent volume where style creation remains stable
+- determine the maximum approval throughput for executives
+- identify bottlenecks in purchase-order and inventory workflows
+
+### Full-journey
+Purpose:
+- simulate a realistic end-to-end business lifecycle
+- measure the aggregate performance of a complete ERP transaction path
+
+Examples:
+- style → BOM → pre-costing → sample → PO → work order → receive item
+
+This is the closest match to actual business value and should be treated as the flagship scenario.
+
+---
+
+## 6. Performance Metrics
+
+The following metrics will be tracked for each workflow:
+- response time
+- p95
+- p99
+- throughput
+- error rate
+- failed transactions
+- approval latency
+- session/authentication overhead
+- resource saturation indicators
+
+We will evaluate:
+- average business transaction time
+- peak-time degradation
+- failure percentage
+- approval delay under load
+- inventory receiving bottlenecks
+- database or application hotspots
+
+---
+
+## 7. Data and Environment Requirements
+
+To keep tests meaningful and repeatable:
+- use a dedicated test environment
+- seed baseline master data
+- ensure factory, organization, and user-role consistency
+- isolate from production data
+- reset or clean transaction data between runs
+- use role-specific credentials and access permissions
+- maintain deterministic test payloads
+
+---
+
+## 8. Dependencies and Risks
+
+### Key dependencies
+- finalized API contracts and expected business responses
+- shared test data definitions with dev team
+- agreed success criteria for each workflow
+- stable user roles and permissions
+- environment availability and reset process
+
+### Risks
+- data dependency chains may cause false failures
+- approval flows may be sensitive to stale records
+- workflow performance is often lower than endpoint performance
+- some business flows may require non-trivial setup before testing
+
+These risks should be managed through dependency-aware scenario design and early dev QA alignment.
+
+---
+
+## 9. Deliverables
+
+The performance testing initiative will deliver:
+- scenario inventory for all core Luminar flows
+- smoke, load, spike, breakpoint, and full-journey scripts
+- threshold definitions per workflow
+- execution reports with p95, p99, and error summaries
+- bottleneck analysis and recommendations
+- comparison against baseline or release targets
+
+---
+
+## 10. Recommendation
+
+This plan is the right approach for Luminar because it reflects how the ERP is actually used:
+- cross-functional flows
+- approval checkpoints
+- role-based access
+- inventory and production sequencing
+- real business pressure points
+
+This is more valuable than endpoint-level testing and better aligned with operational risk.
+
+I recommend we proceed with this flow-based approach and validate the expected success criteria with the development team before locking the performance thresholds.
+
+---
+
+If you want, I can now convert this into:
+1. a one-page manager summary,
+2. a detailed QA test plan,
+3. or a k6 folder structure mapped to these exact Luminar scenarios.

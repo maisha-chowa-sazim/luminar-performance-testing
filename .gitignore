@@ -1,0 +1,17 @@
+# OS / editor
+.DS_Store
+.vscode/
+
+# Logs
+*.log
+
+# k6 output
+k6/results/
+*.json
+
+# Environment
+.env
+.env.*
+
+# Node
+node_modules/

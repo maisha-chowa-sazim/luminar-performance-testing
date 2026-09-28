@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  influxdb:
+    image: influxdb:1.8
+    ports:
+      - "8086:8086"
+    environment:
+      INFLUXDB_DB: k6
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - influxdb
+
+  k6:
+    image: grafana/k6:latest
+    depends_on:
+      - influxdb
+    volumes:
+      - ./k6:/k6
+    working_dir: /k6
+    entrypoint: ["bash", "-lc", "k6 run /k6/scripts/smoke.js --out influxdb=http://influxdb:8086/k6"]
