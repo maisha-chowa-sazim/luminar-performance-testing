@@ -1,5 +1,6 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { approveResource } from '../helpers/approvals.js';
 
 function getEnvValue(name, fallback = '') {
     return String(__ENV[name] ?? fallback).trim();
@@ -81,4 +82,14 @@ export function createPurchaseOrder(token) {
     }
 
     return resp;
+}
+
+
+export function purchaseApproval(token, resourceId, feedback = 'Approved by k6 purchase flow') {
+    return approveResource({
+        token,
+        resourceType: 'purchase',
+        resourceId,
+        feedback,
+    });
 }
