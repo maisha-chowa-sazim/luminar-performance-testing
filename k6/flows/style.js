@@ -15,7 +15,6 @@ export function buildStylePayload() {
         ...base,
         name: `${base.name} ${suffix}`,
         buyerId: getEnvValue('LUMINAR_BUYER_ID', base.buyerId),
-        garmentSizeTemplateId: getEnvValue('LUMINAR_GARMENT_SIZE_TEMPLATE_ID', base.garmentSizeTemplateId),
     };
 }
 

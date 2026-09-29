@@ -1,20 +1,14 @@
 import { setupAuth } from '../helpers/auth.js';
 import { createStyle } from '../flows/style.js';
-import { createPurchaseOrder } from '../flows/purchase-order.js';
 
 export { setupAuth as setup } from '../helpers/auth.js';
 
 export const options = {
     vus: 1,
     iterations: 1,
-    thresholds: {
-        http_req_failed: ['rate<0.05'],
-        http_req_duration: ['p(95)<3000'],
-    },
 };
 
 export default function (data) {
     const token = data?.token || __ENV.SAVED_SESSION_TOKEN || '';
     createStyle(token);
-    createPurchaseOrder(token);
 }

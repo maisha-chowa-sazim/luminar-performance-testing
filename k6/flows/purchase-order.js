@@ -48,9 +48,9 @@ export function buildPurchaseOrderPayload() {
 }
 
 export function createPurchaseOrder(token) {
-    const baseUrl = getEnvValue('BASE_URL', 'http://localhost:5000');
-    const factoryId = getEnvValue('LUMINAR_FACTORY_ID', '36178d66-1935-4ef3-9331-9bc42cdd94d7');
-    const organizationId = getEnvValue('LUMINAR_ORGANIZATION_ID', 'ede81097-9170-4f8a-a013-87f82c9aaa8d');
+    const baseUrl = getEnvValue('BASE_URL');
+    const factoryId = getEnvValue('LUMINAR_FACTORY_ID');
+    const organizationId = getEnvValue('LUMINAR_ORGANIZATION_ID');
     const payload = buildPurchaseOrderPayload();
     const activeToken = token || __ENV.SAVED_SESSION_TOKEN || '';
 
@@ -85,11 +85,11 @@ export function createPurchaseOrder(token) {
 }
 
 
-export function purchaseApproval(token, resourceId, feedback = 'Approved by k6 purchase flow') {
-    return approveResource({
-        token,
-        resourceType: 'purchase',
-        resourceId,
-        feedback,
-    });
-}
+// export function purchaseApproval(token, resourceId, feedback = 'Approved by k6 purchase flow') {
+//     return approveResource({
+//         token,
+//         resourceType: 'purchase',
+//         resourceId,
+//         feedback,
+//     });
+// }
