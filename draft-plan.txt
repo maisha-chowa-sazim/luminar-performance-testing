@@ -106,7 +106,7 @@ This is intentionally business-flow based rather than API-by-API coverage.
 ### Flow 4: BOM creation and approval
 - Preconditions
   - reuse the merchandiser login session
-  - reuse the created style
+  - reuse the created style 
 - Test data used
   - BOM ID, style ID, material list, quantities
 - Actions performed
@@ -118,10 +118,11 @@ This is intentionally business-flow based rather than API-by-API coverage.
   - approval state updates correctly
   - to be finalized with dev team
 - Performance threshold
-  - p95 under target for create and approval
+  - p90 under sample workflow threshold
+  - p95 under sample workflow threshold
+  - p99 under sample workflow threshold
 
-- Cleanup or reset
-  - delete BOM or reset environment state
+
 
 ### Flow 5: Pre-costing creation and approval
 - Preconditions
@@ -138,9 +139,10 @@ This is intentionally business-flow based rather than API-by-API coverage.
   - audit/approval status matches rules
   - to be finalized with dev team
 - Performance threshold
-  - p95 under agreed costing SLA
-- Cleanup or reset
-  - remove costing record and reset dataset
+  - p90 under sample workflow threshold
+  - p95 under sample workflow threshold
+  - p99 under sample workflow threshold
+
 
 ### Flow 6: Sample creation
 - Preconditions
@@ -156,9 +158,10 @@ This is intentionally business-flow based rather than API-by-API coverage.
   - validation passes
   - to be finalized with dev team
 - Performance threshold
+  - p90 under sample workflow threshold
   - p95 under sample workflow threshold
-- Cleanup or reset
-  - remove sample or reset flow data
+  - p99 under sample workflow threshold
+
 
 ### Flow 7: Purchase order creation and approval
 - Preconditions
