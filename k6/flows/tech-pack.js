@@ -3,32 +3,41 @@ import { check } from 'k6';
 import { getApiUrl, tenantHeaders } from '../helpers/http.js';
 
 const techPackFixture = JSON.parse(open('../data/tech-pack.json'));
+const techPackFiles = techPackFixture.files.map((file) => ({
+    ...file,
+    contents: open(`../data/techpack/${file.fileName}`, 'b'),
+}));
 
-function createTestPdf() {
-    const stream = 'BT /F1 12 Tf 10 50 Td (k6 tech pack smoke fixture) Tj ET\n';
-    const objects = [
-        '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n',
-        '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n',
-        '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 100] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>\nendobj\n',
-        `4 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}endstream\nendobj\n`,
-        '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n',
-    ];
-    let pdf = '%PDF-1.4\n';
-    const offsets = [0];
+function encodeMultipartText(value) {
+    const text = String(value);
+    const bytes = new Uint8Array(text.length);
 
-    for (const object of objects) {
-        offsets.push(pdf.length);
-        pdf += object;
+    for (let index = 0; index < text.length; index += 1) {
+        bytes[index] = text.charCodeAt(index);
     }
 
-    const xrefOffset = pdf.length;
-    pdf += 'xref\n0 6\n0000000000 65535 f \n';
-    for (let index = 1; index < offsets.length; index += 1) {
-        pdf += `${String(offsets[index]).padStart(10, '0')} 00000 n \n`;
-    }
-    pdf += `trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+    return bytes;
+}
 
-    return pdf;
+function buildMultipartBody(fields, file, boundary) {
+    const chunks = Object.entries(fields).map(([name, value]) => encodeMultipartText(
+        `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`,
+    ));
+    chunks.push(encodeMultipartText(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${file.fileName}"\r\nContent-Type: ${file.contentType}\r\n\r\n`,
+    ));
+    chunks.push(new Uint8Array(file.contents));
+    chunks.push(encodeMultipartText(`\r\n--${boundary}--\r\n`));
+
+    const body = new Uint8Array(chunks.reduce((size, chunk) => size + chunk.length, 0));
+    let offset = 0;
+
+    for (const chunk of chunks) {
+        body.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    return body.buffer;
 }
 
 export function createTechPack(token, styleId) {
@@ -44,7 +53,7 @@ export function createTechPack(token, styleId) {
     const uploadUrlsResp = http.post(
         getApiUrl(`/api/v1/styles/${styleId}/tech-packs/upload-urls`),
         JSON.stringify({
-            files: techPackFixture.files.map(({ fileName, contentType }) => ({ fileName, contentType })),
+            files: techPackFiles.map(({ fileName, contentType }) => ({ fileName, contentType })),
         }),
         {
             headers: tenantHeaders(token),
@@ -68,35 +77,44 @@ export function createTechPack(token, styleId) {
         return null;
     }
 
-    const uploadInfo = uploadUrlsResp.json()?.data?.[0];
-    const file = techPackFixture.files[0];
-    if (!uploadInfo?.uploadUrl || !uploadInfo?.fileKey || !uploadInfo?.fields) {
-        console.error(`Tech pack upload URL response is missing upload details: ${uploadUrlsResp.body}`);
+    const uploadInfos = uploadUrlsResp.json()?.data;
+    if (!Array.isArray(uploadInfos) || uploadInfos.length !== techPackFiles.length) {
+        console.error(`Tech pack upload URL response count did not match requested files: ${uploadUrlsResp.body}`);
         return null;
     }
 
-    const uploadResp = http.post(uploadInfo.uploadUrl, {
-        ...uploadInfo.fields,
-        file: http.file(createTestPdf(), file.fileName, file.contentType),
-    }, {
-        tags: { feature: 'tech-pack', endpoint: 'uploadTechPackFile', name: 'tech_pack_file_upload' },
-    });
+    const uploadedFiles = [];
+    for (const file of techPackFiles) {
+        const uploadInfo = uploadInfos.find((info) => info.fileName === file.fileName);
+        if (!uploadInfo?.uploadUrl || !uploadInfo?.fileKey || !uploadInfo?.fields) {
+            console.error(`Tech pack upload URL response is missing fields for ${file.fileName}`);
+            return null;
+        }
 
-    const uploadOk = check(uploadResp, {
-        'tech pack file upload status is successful': (r) => [200, 201, 204].includes(r.status),
-    });
+        const boundary = `k6-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        const uploadResp = http.post(uploadInfo.uploadUrl, buildMultipartBody(uploadInfo.fields, file, boundary), {
+            headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+            tags: { feature: 'tech-pack', endpoint: 'uploadTechPackFile', name: 'tech_pack_file_upload' },
+        });
 
-    if (!uploadOk) {
-        console.error(`Tech pack file upload failed: ${uploadResp.status} ${uploadResp.body}`);
-        return null;
-    }
+        const uploadOk = check(uploadResp, {
+            [`tech pack upload succeeded: ${file.fileName}`]: (r) => [200, 201, 204].includes(r.status),
+        });
 
-    const payload = {
-        files: [{
+        if (!uploadOk) {
+            console.error(`Tech pack file upload failed for ${file.fileName}: ${uploadResp.status} ${uploadResp.body}`);
+            return null;
+        }
+
+        uploadedFiles.push({
             type: file.type,
             fileKey: uploadInfo.fileKey,
             fileName: file.fileName,
-        }],
+        });
+    }
+
+    const payload = {
+        files: uploadedFiles,
     };
     const resp = http.post(
         getApiUrl(`/api/v1/styles/${styleId}/tech-packs`),

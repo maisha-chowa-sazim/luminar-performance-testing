@@ -8,9 +8,10 @@ export function buildBomPayload(styleComboId = '') {
     const payload = JSON.parse(JSON.stringify(bomFixture));
 
     if (styleComboId) {
-        payload.fabricEntries = payload.fabricEntries.map((entry) => ({
+        payload.fabricEntries = payload.fabricEntries.map(({ id, compositions, ...entry }) => ({
             ...entry,
             comboId: styleComboId,
+            compositions: compositions.map(({ id: compositionId, ...composition }) => composition),
         }));
     }
 
