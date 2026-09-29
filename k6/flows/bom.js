@@ -4,21 +4,33 @@ import { getApiUrl, tenantHeaders } from '../helpers/http.js';
 
 const bomFixture = JSON.parse(open('../data/bom.json'));
 
-export function buildBomPayload() {
-    return JSON.parse(JSON.stringify(bomFixture));
+export function buildBomPayload(styleComboId = '') {
+    const payload = JSON.parse(JSON.stringify(bomFixture));
+
+    if (styleComboId) {
+        payload.fabricEntries = payload.fabricEntries.map((entry) => ({
+            ...entry,
+            comboId: styleComboId,
+        }));
+    }
+
+    return payload;
 }
 
-export function createBom(token, styleId) {
+export function createBom(token, styleId, styleComboId) {
     const hasStyleId = check(styleId, {
         'BOM style ID is provided': (value) => typeof value === 'string' && value.length > 0,
     });
+    const hasStyleComboId = check(styleComboId, {
+        'BOM style combo ID is provided': (value) => typeof value === 'string' && value.length > 0,
+    });
 
-    if (!hasStyleId) {
-        console.error('BOM create skipped: pass the ID of a newly created style.');
+    if (!hasStyleId || !hasStyleComboId) {
+        console.error('BOM create skipped: pass a newly created style ID and one of its combo IDs.');
         return null;
     }
 
-    const payload = buildBomPayload();
+    const payload = buildBomPayload(styleComboId);
     const resp = http.post(
         getApiUrl(`/api/v1/styles/${styleId}/boms`),
         JSON.stringify(payload),

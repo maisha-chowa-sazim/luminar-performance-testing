@@ -1,5 +1,5 @@
 import { createBom } from '../flows/bom.js';
-import { createStyle, getCreatedStyleId } from '../flows/style.js';
+import { createStyle, getCreatedStyleId, getStyleDetails } from '../flows/style.js';
 
 export { setupAuth as setup } from '../helpers/auth.js';
 
@@ -14,6 +14,8 @@ export default function (data) {
     const styleId = getCreatedStyleId(styleResponse);
 
     if (styleId) {
-        createBom(token, styleId);
+        const style = getStyleDetails(token, styleId);
+        const styleComboId = style?.combos?.[0]?.id;
+        createBom(token, styleId, styleComboId);
     }
 }

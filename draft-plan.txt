@@ -377,3 +377,9 @@ If you want, I can now convert this into:
 1. a one-page manager summary,
 2. a detailed QA test plan,
 3. or a k6 folder structure mapped to these exact Luminar scenarios.
+
+{
+  "bomEntries": [],
+  "fabricEntries": [],
+  "status": "DRAFT"
+}
