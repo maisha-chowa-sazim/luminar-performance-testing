@@ -9,14 +9,16 @@ This project follows the flow-based pattern used in the example k6 project:
 
 ## Smoke scenarios
 
-Each scenario logs in as the merchandiser, creates a fresh style, and runs one iteration with one VU. BOM, costing, sample, and tech-pack creation all use that new style ID.
+Each smoke scenario runs one iteration with one VU. The BOM, costing, sample, and tech-pack scenarios create a fresh style first. The receive-item scenario logs in as merchandiser, senior merchandiser, then inventory.
 
-Run the create-only tests independently:
+Run the scenarios independently:
 ```bash
 k6 run k6/scenarios/sample-smoke.js
 k6 run k6/scenarios/bom-smoke.js
 k6 run k6/scenarios/pre-costing-smoke.js
 k6 run k6/scenarios/tech-pack-smoke.js
+k6 run k6/scenarios/style-to-pre-costing-flow.js
+k6 run k6/scenarios/work-order-and-receive-item-flow.js
 ```
 
 ## Environment variables

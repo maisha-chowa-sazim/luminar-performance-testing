@@ -56,6 +56,7 @@ export function login(role = 'merchandiser') {
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json, text/plain, */*',
+                Origin: baseUrl,
             },
             tags: { feature: 'login', endpoint: 'sign-in-email', name: 'login_sign_in_email' },
         },
