@@ -1,0 +1,45 @@
+{
+    "buyerId": "05f2b123-1eff-4afb-b6e2-163c610cbe29",
+    "buyerPoNumber": "BPO-123446",
+    "paymentProviderId": "2e303013-2d02-45a4-a1be-77c52a064589",
+    "styles": [
+        {
+            "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
+            "selectedStyleComboIds": []
+        }
+    ],
+    "teamId": null,
+    "productionFlow": [
+        "CUTTING",
+        "SEWING",
+        "FINISHING",
+        "PACKING"
+    ],
+    "shipments": [
+        {
+            "shipmentMode": "AIR",
+            "shipmentDate": "2026-09-28",
+            "portOfDestination": "Constanta",
+            "deliveryNumber": null,
+            "orderItems": [
+                {
+                    "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                    "styleComboId": "5d6c66a8-729d-430e-b790-da534e68ab14",
+                    "size": "M",
+                    "quantity": 400,
+                    "unitPriceCurrency": "USD",
+                    "unitPrice": 5
+                },
+                {
+                    "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                    "styleComboId": "5d6c66a8-729d-430e-b790-da534e68ab14",
+                    "size": "L",
+                    "quantity": 200,
+                    "unitPriceCurrency": "USD",
+                    "unitPrice": 5
+                }
+            ]
+        }
+    ],
+    "status": "PENDING_APPROVAL"
+}

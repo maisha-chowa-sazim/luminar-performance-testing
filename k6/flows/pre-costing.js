@@ -49,3 +49,51 @@ export function createPreCosting(token, styleId) {
 
     return resp;
 }
+
+export function getCreatedPreCostingId(resp) {
+    let costingId = null;
+
+    try {
+        costingId = resp?.json()?.data?.id || null;
+    } catch (err) {
+        costingId = null;
+    }
+
+    const ok = check(costingId, {
+        'pre-costing create returns an ID': (id) => typeof id === 'string' && id.length > 0,
+    });
+
+    if (!ok) {
+        console.error(`Could not read created pre-costing ID: ${resp?.status} ${resp?.body}`);
+    }
+
+    return costingId;
+}
+
+export function submitPreCostingForApproval(token, styleId, costingId) {
+    const resp = http.patch(
+        getApiUrl(`/api/v1/styles/${styleId}/costings/${costingId}`),
+        JSON.stringify({ status: 'PENDING_APPROVAL' }),
+        {
+            headers: tenantHeaders(token),
+            tags: { feature: 'pre-costing', endpoint: 'submitForApproval', name: 'pre_costing_submit' },
+        },
+    );
+
+    const ok = check(resp, {
+        'pre-costing submission status is 200': (r) => r.status === 200,
+        'pre-costing submission returns success payload': (r) => {
+            try {
+                return r.json()?.success === true;
+            } catch (err) {
+                return false;
+            }
+        },
+    });
+
+    if (!ok) {
+        console.error(`Pre-costing submission failed: ${resp.status} ${resp.body}`);
+    }
+
+    return resp;
+}

@@ -1,0 +1,48 @@
+{
+  "reservationId": "c5f7a4c0-5dfb-4d7d-98fb-8d1b6f8e3871",
+  "deliveryDate": "2026-11-05",
+  "items": [
+    {
+      "measurableItemId": "d5ff9df2-bde4-4515-a7a5-de0412097ced",
+      "supplierId": "623f8709-c648-43ca-9940-5c06d1292c8e",
+      "variantType": "OTHER",
+      "unitPriceCurrency": "USD",
+      "variants": [
+        {
+          "measurableItemVariantId": "61cd92d2-52b2-4ee8-9b66-3c489448592e",
+          "variantValue": "M",
+          "quantity": "250",
+          "purchaseOrderId": "e8470226-cfaa-4c64-bda6-41a791db942b",
+          "variantGroupId": "2fa5a12b-4f41-4ca3-bc6d-c50aee46e77d",
+          "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
+          "garmentSizes": [
+            "M"
+          ],
+          "garmentColor": "00X",
+          "garmentsQuantity": "500",
+          "consumption": ".5",
+          "wastagePercentage": "0",
+          "attributes": []
+        },
+        {
+          "measurableItemVariantId": "e3eccfc9-c16b-47aa-b117-88e239ba0351",
+          "variantValue": "L",
+          "quantity": "250",
+          "purchaseOrderId": "e8470226-cfaa-4c64-bda6-41a791db942b",
+          "variantGroupId": "b897378a-69da-4e71-bd75-65f9f7682e7c",
+          "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
+          "garmentSizes": [
+            "L"
+          ],
+          "garmentColor": "00X",
+          "garmentsQuantity": "500",
+          "consumption": ".5",
+          "wastagePercentage": "0",
+          "attributes": []
+        }
+      ]
+    }
+  ],
+  "isDraft": false,
+  "buyerId": "05f2b123-1eff-4afb-b6e2-163c610cbe29"
+}

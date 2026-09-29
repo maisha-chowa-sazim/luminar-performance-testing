@@ -1,0 +1,22 @@
+{
+    "merchandiser": {
+        "emailEnvKey": "MERCHANDISER_EMAIL",
+        "passwordEnvKey": "MERCHANDISER_PASSWORD",
+        "role": "merchandiser"
+    },
+    "inventory": {
+        "emailEnvKey": "INVENTORY_EMAIL",
+        "passwordEnvKey": "INVENTORY_PASSWORD",
+        "role": "inventory"
+    },
+    "executive": {
+        "emailEnvKey": "EXECUTIVE_EMAIL",
+        "passwordEnvKey": "EXECUTIVE_PASSWORD",
+        "role": "executive"
+    },
+    "seniorMerchandiser": {
+        "emailEnvKey": "SENIOR_MERCHANDISER_EMAIL",
+        "passwordEnvKey": "SENIOR_MERCHANDISER_PASSWORD",
+        "role": "seniorMerchandiser"
+    }
+}

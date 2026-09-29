@@ -1,0 +1,14 @@
+{
+  "workOrderId": "8554d040-7853-48dc-8a9f-5d4e5fb74455",
+  "grnNumber": "GRN-2026-0001",
+  "deliveryChallanNumber": "DC-2026-001",
+  "receivedAt": "2026-10-12T08:00:00.000Z",
+  "imageUrl": "https://example.com/grn/2026/GRN-2026-0001.jpg",
+  "items": [
+    {
+      "poItemVariantId": "1ec7437d-8619-463c-b9d0-9fb95f7f5c62",
+      "receivedQuantity": 120,
+      "measurementUnit": "PCS"
+    }
+  ]
+}

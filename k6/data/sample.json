@@ -1,0 +1,11 @@
+{
+  "sampleStage": "PHOTO_SAMPLE",
+  "collectionSource": "SAMPLE_ROOM",
+  "collectionStatus": "NOT_COLLECTED",
+  "dueDate": "2026-10-15",
+  "collectedAt": "2026-10-08T09:30:00.000Z",
+  "note": "Initial photo sample for buyer review before production approval.",
+  "buyerPrice": 180,
+  "buyerPriceCurrency": "USD",
+  "buyerPaymentStatus": "PENDING"
+}

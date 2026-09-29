@@ -1,0 +1,179 @@
+{
+    "data": {
+        "id": "e8470226-cfaa-4c64-bda6-41a791db942b",
+        "poNumber": "PO-TEST-2026-028",
+        "styles": [
+            {
+                "id": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                "name": "TestB1-style-1R",
+                "styleNumber": "STY-2026-047",
+                "quantity": 1000,
+                "styleStatus": "DEVELOPMENT",
+                "productType": "",
+                "season": "",
+                "collection": "",
+                "genders": [],
+                "fitType": "",
+                "sizeRange": null,
+                "sizeTemplate": [
+                    "M",
+                    "L"
+                ],
+                "washFinish": "",
+                "hasPrint": false,
+                "printTypes": [],
+                "embroidery": false,
+                "embroideryTypes": [],
+                "combos": [
+                    {
+                        "id": "5d6c66a8-729d-430e-b790-da534e68ab14",
+                        "name": "top",
+                        "color": "00X",
+                        "colorCode": null
+                    }
+                ],
+                "selectedStyleComboIds": [
+                    "5d6c66a8-729d-430e-b790-da534e68ab14"
+                ]
+            }
+        ],
+        "buyer": {
+            "id": "05f2b123-1eff-4afb-b6e2-163c610cbe29"
+        },
+        "paymentProvider": {
+            "id": "2e303013-2d02-45a4-a1be-77c52a064589",
+            "name": "NRB Buyers",
+            "code": "Provider-0004"
+        },
+        "buyerPoNumber": "BPO-1234444",
+        "merchandiser": {
+            "id": "ff216a39-c556-4d67-9805-8eb9905274c9",
+            "name": "Merchandiser User"
+        },
+        "assignedFactory": {
+            "id": "36178d66-1935-4ef3-9331-9bc42cdd94d7",
+            "name": "Dip "
+        },
+        "embroidery": false,
+        "productionFlow": [
+            "CUTTING",
+            "SEWING",
+            "FINISHING",
+            "PACKING"
+        ],
+        "externalPrinting": false,
+        "externalEmbroidery": false,
+        "status": "PENDING_APPROVAL",
+        "state": "ACTIVE",
+        "compositions": [],
+        "shipments": [
+            {
+                "id": "f04dfa98-5f58-4cd4-a46a-df6c2218ebb5",
+                "status": "PLANNED",
+                "shipmentMode": "AIR",
+                "shipmentDate": "2026-09-29",
+                "portOfDestination": "Constanta",
+                "orderItems": [
+                    {
+                        "id": "92db1c81-bdc3-4de2-baa1-27ce03bd6608",
+                        "style": {
+                            "id": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                            "name": "TestB1-style-1R",
+                            "styleNumber": "STY-2026-047"
+                        },
+                        "styleCombo": {
+                            "id": "5d6c66a8-729d-430e-b790-da534e68ab14",
+                            "name": "top",
+                            "color": "00X"
+                        },
+                        "size": "M",
+                        "color": "00X",
+                        "quantity": 500,
+                        "unitPriceCurrency": "USD"
+                    },
+                    {
+                        "id": "30fd0819-1783-4fe5-9f27-0069197686fd",
+                        "style": {
+                            "id": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                            "name": "TestB1-style-1R",
+                            "styleNumber": "STY-2026-047"
+                        },
+                        "styleCombo": {
+                            "id": "5d6c66a8-729d-430e-b790-da534e68ab14",
+                            "name": "top",
+                            "color": "00X"
+                        },
+                        "size": "L",
+                        "color": "00X",
+                        "quantity": 500,
+                        "unitPriceCurrency": "USD"
+                    }
+                ]
+            }
+        ],
+        "orderItems": [
+            {
+                "id": "92db1c81-bdc3-4de2-baa1-27ce03bd6608",
+                "style": {
+                    "id": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                    "name": "TestB1-style-1R",
+                    "styleNumber": "STY-2026-047"
+                },
+                "size": "M",
+                "color": "00X",
+                "quantity": 500,
+                "unitPrice": null,
+                "unitPriceCurrency": "USD"
+            },
+            {
+                "id": "30fd0819-1783-4fe5-9f27-0069197686fd",
+                "style": {
+                    "id": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                    "name": "TestB1-style-1R",
+                    "styleNumber": "STY-2026-047"
+                },
+                "size": "L",
+                "color": "00X",
+                "quantity": 500,
+                "unitPrice": null,
+                "unitPriceCurrency": "USD"
+            }
+        ],
+        "totalPieces": 1000,
+        "orderValues": [],
+        "deliveryDate": "2026-09-29",
+        "earnedMinutes": null,
+        "styleBoms": [
+            {
+                "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                "styleNumber": "STY-2026-047",
+                "styleName": "TestB1-style-1R",
+                "bomId": "f10d5dc0-57a5-41d3-b2a0-3cb9704d0b49",
+                "bomStatus": "APPROVED",
+                "styleCreatedAt": "2026-09-24T11:50:19.903Z"
+            }
+        ],
+        "stylePreCostings": [
+            {
+                "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                "styleNumber": "STY-2026-047",
+                "styleName": "TestB1-style-1R",
+                "preCostingId": "92529790-f582-4735-877d-18c490a436f0",
+                "preCostingStatus": "APPROVED",
+                "preCostingCurrency": "USD",
+                "preCostingUpdatedAt": "2026-09-24T15:36:07.393Z",
+                "styleCreatedAt": "2026-09-24T11:50:19.903Z"
+            }
+        ],
+        "bomStatus": "APPROVED",
+        "createdAt": "2026-09-29T05:12:51.328Z",
+        "updatedAt": "2026-09-29T05:12:51.377Z",
+        "createdBy": {
+            "user": {
+                "name": "Merchandiser User"
+            }
+        }
+    },
+    "message": "Purchase order created successfully",
+    "success": true
+}

@@ -1,6 +1,6 @@
+import { uniqueId } from '../helpers/unique-id.js';
 import http from 'k6/http';
 import { check } from 'k6';
-import { approveResource } from '../helpers/approvals.js';
 
 function getEnvValue(name, fallback = '') {
     return String(__ENV[name] ?? fallback).trim();
@@ -14,14 +14,14 @@ export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOver
     if (styleIdOverride && !styleComboIdOverride) {
         return {
             buyerId,
-            buyerPoNumber: `K6-${Date.now()}`,
+            buyerPoNumber: `K6-${uniqueId()}`,
             styles: [{ styleId }],
         };
     }
 
     return {
         buyerId,
-        buyerPoNumber: `BPO-${Date.now()}`,
+        buyerPoNumber: `BPO-${uniqueId()}`,
         paymentProviderId: getEnvValue('LUMINAR_PAYMENT_PROVIDER_ID', '2e303013-2d02-45a4-a1be-77c52a064589'),
         styles: [{ styleId, selectedStyleComboIds: styleComboIdOverride ? [styleComboId] : [] }],
         teamId: null,
@@ -29,7 +29,7 @@ export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOver
         shipments: [
             {
                 shipmentMode: 'AIR',
-                shipmentDate: '2026-09-28',
+                shipmentDate: getEnvValue('LUMINAR_SHIPMENT_DATE', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)),
                 portOfDestination: 'Constanta',
                 deliveryNumber: null,
                 orderItems: [
@@ -112,13 +112,3 @@ export function getCreatedPurchaseOrderId(resp) {
 
     return orderId;
 }
-
-
-// export function purchaseApproval(token, resourceId, feedback = 'Approved by k6 purchase flow') {
-//     return approveResource({
-//         token,
-//         resourceType: 'purchase',
-//         resourceId,
-//         feedback,
-//     });
-// }

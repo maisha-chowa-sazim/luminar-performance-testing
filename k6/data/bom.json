@@ -1,0 +1,37 @@
+{
+  "bomEntries": [
+    {
+      "measurableItemId": "04208673-c7bd-4e2f-9984-3b6c68fe58d4",
+      "measurementUnit": "YDS",
+      "variants": [],
+      "consumption": 0.7,
+      "consumptionUnit": "PER_PC"
+    },
+    {
+      "measurableItemId": "fa382bf3-6988-40fb-a029-4680fb174f7b",
+      "measurementUnit": "pieces",
+      "variants": [],
+      "consumption": 0.9,
+      "consumptionUnit": "PER_PC"
+    }
+  ],
+  "fabricEntries": [
+    {
+      "id": "5a650f0b-89a4-4692-9c72-8acaa7b7e35f",
+      "comboId": "ae753a1f-d4ee-4306-955f-05cb20d55ae9",
+      "itemName": "Main Fabric",
+      "itemUse": [],
+      "itemColor": "#000000",
+      "compositions": [
+        {
+          "id": "e0dd2a73-934a-443a-8b14-9ab273f38191",
+          "fiberName": "Nylon",
+          "percentage": 100
+        }
+      ],
+      "consumption": 0.5,
+      "consumptionUnit": "PER_PC"
+    }
+  ],
+  "status": "PENDING_APPROVAL"
+}

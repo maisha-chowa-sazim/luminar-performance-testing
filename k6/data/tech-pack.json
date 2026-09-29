@@ -1,0 +1,19 @@
+{
+  "files": [
+    {
+      "type": "TECH_PACK",
+      "fileName": "basic-hoodie-tech-pack-template.pdf",
+      "contentType": "application/pdf"
+    },
+    {
+      "type": "PRINT_ARTWORK",
+      "fileName": "8107882.psd",
+      "contentType": "image/vnd.adobe.photoshop"
+    },
+    {
+      "type": "AOP_ARTWORK",
+      "fileName": "bruno-guerrero-Ugb9Gaccxys-unsplash.jpg",
+      "contentType": "image/jpeg"
+    }
+  ]
+}

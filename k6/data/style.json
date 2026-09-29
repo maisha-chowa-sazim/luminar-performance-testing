@@ -1,0 +1,33 @@
+{
+    "name": "Crop top",
+    "buyerId": "05f2b123-1eff-4afb-b6e2-163c610cbe29",
+    "styleStatus": "DEVELOPMENT",
+    "divisions": [
+        "Casual Wear"
+    ],
+    "productType": "Top",
+    "season": "2026 Spring",
+    "collection": "Crop Top Collection",
+    "fitType": "Regular Fit",
+    "garmentSizeTemplateId": "a1935b34-e013-4f37-83e7-29196fdd919f",
+    "genders": [
+        "Womens"
+    ],
+    "tpReceivedDate": "2026-01-15",
+    "washFinish": "Stone Wash",
+    "hasPrint": false,
+    "printTypes": [],
+    "embroidery": false,
+    "embroideryTypes": [],
+    "combos": [
+        {
+            "name": "Black",
+            "color": "Black",
+            "colorCode": "#000000"
+        }
+    ],
+    "treatment": {
+        "embellishmentTechnique": "None",
+        "washThread": "Cotton"
+    }
+}

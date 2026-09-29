@@ -1,12 +1,14 @@
 import { login, setupAuth } from '../helpers/auth.js';
 import { createReceiveItem } from '../flows/receive-item.js';
 import { approveWorkOrder, createWorkOrder, getCreatedWorkOrderId, getCreatedWorkOrderVariantId, sendWorkOrderToSupplier } from '../flows/work-order.js';
+import { FUNCTIONAL_THRESHOLDS } from '../config/functional-thresholds.js';
 
 export { setupAuth as setup } from '../helpers/auth.js';
 
 export const options = {
     vus: 1,
     iterations: 1,
+    thresholds: FUNCTIONAL_THRESHOLDS,
 };
 
 export default function (data) {

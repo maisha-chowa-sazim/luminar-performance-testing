@@ -9,17 +9,25 @@ function getEnvValue(name, fallback = '') {
     return String(__ENV[name] ?? fallback).trim();
 }
 
-export function buildWorkOrderPayload(reservationId) {
+export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', styleId = '') {
     const payload = JSON.parse(JSON.stringify(workOrderFixture));
 
     return {
         ...payload,
         reservationId,
         buyerId: getEnvValue('LUMINAR_BUYER_ID', payload.buyerId),
+        items: payload.items.map((item) => ({
+            ...item,
+            variants: item.variants.map((variant) => ({
+                ...variant,
+                ...(purchaseOrderId ? { purchaseOrderId } : {}),
+                ...(styleId ? { styleId } : {}),
+            })),
+        })),
     };
 }
 
-export function createWorkOrder(token) {
+export function createWorkOrder(token, purchaseOrderId = '', styleId = '') {
     const reservationResp = http.post(
         getApiUrl('/api/v1/work-orders/reserve-number'),
         null,
@@ -46,7 +54,13 @@ export function createWorkOrder(token) {
     }
 
     const reservationId = reservationResp.json()?.data?.id;
-    const payload = buildWorkOrderPayload(reservationId);
+    if (!check(reservationId, {
+        'work-order reservation returns an ID': (id) => typeof id === 'string' && id.length > 0,
+    })) {
+        console.error('Work-order creation skipped: reservation response has no ID.');
+        return null;
+    }
+    const payload = buildWorkOrderPayload(reservationId, purchaseOrderId, styleId);
     const resp = http.post(
         getApiUrl('/api/v1/work-orders'),
         JSON.stringify(payload),

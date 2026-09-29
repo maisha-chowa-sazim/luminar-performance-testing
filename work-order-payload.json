@@ -1,0 +1,100 @@
+{
+    "data": {
+        "id": "4f141ec1-a719-4075-a603-232c0b5be9b5",
+        "poNumber": "WO-2026-036",
+        "status": "PENDING_APPROVAL",
+        "purchaseOrders": [
+            {
+                "id": "e8470226-cfaa-4c64-bda6-41a791db942b",
+                "poNumber": "PO-TEST-2026-028",
+                "buyerPoNumber": "BPO-1234444"
+            }
+        ],
+        "buyerId": "05f2b123-1eff-4afb-b6e2-163c610cbe29",
+        "items": [
+            {
+                "id": "ed0049cc-ae75-47e0-ac44-2c8924aa143c",
+                "measurableItem": {
+                    "id": "d5ff9df2-bde4-4515-a7a5-de0412097ced",
+                    "itemName": "Care Lable",
+                    "itemType": "Trims",
+                    "measurementUnit": "Pcs"
+                },
+                "name": "Care Lable",
+                "type": "Trims",
+                "supplier": {
+                    "id": "623f8709-c648-43ca-9940-5c06d1292c8e",
+                    "name": "KAMAL YARN LIMITED"
+                },
+                "measurementUnit": "Pcs",
+                "variantType": "OTHER",
+                "unitPriceCurrency": "USD",
+                "variants": [
+                    {
+                        "id": "4b1e8906-d920-46c9-8ead-68f579cee45c",
+                        "measurableItemVariantId": "61cd92d2-52b2-4ee8-9b66-3c489448592e",
+                        "variantValue": "M",
+                        "quantity": "250",
+                        "purchaseOrder": {
+                            "id": "e8470226-cfaa-4c64-bda6-41a791db942b",
+                            "poNumber": "PO-TEST-2026-028",
+                            "buyerPoNumber": "BPO-1234444"
+                        },
+                        "variantGroupId": "2fa5a12b-4f41-4ca3-bc6d-c50aee46e77d",
+                        "style": {
+                            "id": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                            "styleNumber": "STY-2026-047",
+                            "name": "TestB1-style-1R"
+                        },
+                        "garmentSizes": [
+                            "M"
+                        ],
+                        "garmentColor": "00X",
+                        "garmentsQuantity": "500",
+                        "consumption": ".5",
+                        "wastagePercentage": "0",
+                        "attributes": [],
+                        "sortOrder": 0
+                    },
+                    {
+                        "id": "5e5cf002-8a59-4265-9d20-1d82f3245f4c",
+                        "measurableItemVariantId": "e3eccfc9-c16b-47aa-b117-88e239ba0351",
+                        "variantValue": "L",
+                        "quantity": "250",
+                        "purchaseOrder": {
+                            "id": "e8470226-cfaa-4c64-bda6-41a791db942b",
+                            "poNumber": "PO-TEST-2026-028",
+                            "buyerPoNumber": "BPO-1234444"
+                        },
+                        "variantGroupId": "b897378a-69da-4e71-bd75-65f9f7682e7c",
+                        "style": {
+                            "id": "570928a2-4720-48b5-a608-91048b2c5d7a",
+                            "styleNumber": "STY-2026-047",
+                            "name": "TestB1-style-1R"
+                        },
+                        "garmentSizes": [
+                            "L"
+                        ],
+                        "garmentColor": "00X",
+                        "garmentsQuantity": "500",
+                        "consumption": ".5",
+                        "wastagePercentage": "0",
+                        "attributes": [],
+                        "sortOrder": 1
+                    }
+                ],
+                "createdAt": "2026-09-29T05:19:25.130Z",
+                "updatedAt": "2026-09-29T05:19:25.145Z"
+            }
+        ],
+        "createdAt": "2026-09-29T05:19:25.129Z",
+        "updatedAt": "2026-09-29T05:19:25.144Z",
+        "createdBy": {
+            "user": {
+                "name": null
+            }
+        }
+    },
+    "message": "Work order created successfully",
+    "success": true
+}

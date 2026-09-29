@@ -59,3 +59,23 @@ export function createBom(token, styleId, styleComboId) {
 
     return resp;
 }
+
+export function getCreatedBomId(resp) {
+    let bomId = null;
+
+    try {
+        bomId = resp?.json()?.data?.id || null;
+    } catch (err) {
+        bomId = null;
+    }
+
+    const ok = check(bomId, {
+        'BOM create returns an ID': (id) => typeof id === 'string' && id.length > 0,
+    });
+
+    if (!ok) {
+        console.error(`Could not read created BOM ID: ${resp?.status} ${resp?.body}`);
+    }
+
+    return bomId;
+}

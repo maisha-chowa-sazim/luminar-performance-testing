@@ -1,0 +1,21 @@
+{
+  "name": "luminar-k6-performance-testing",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:smoke": "node k6/reporting/run.mjs smoke",
+    "test:performance": "node k6/reporting/run.mjs",
+    "test:reporting": "node --test k6/tests/*.test.mjs",
+    "test:load:5": "node k6/reporting/run.mjs load-5-users",
+    "test:load:10": "node k6/reporting/run.mjs load-10-users",
+    "test:load:20": "node k6/reporting/run.mjs load-20-users",
+    "test:load:50": "node k6/reporting/run.mjs load-50-users",
+    "test:load:100": "node k6/reporting/run.mjs load-100-users"
+  },
+  "dependencies": {
+    "pdfkit": "0.17.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

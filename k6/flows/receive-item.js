@@ -1,3 +1,4 @@
+import { uniqueId } from '../helpers/unique-id.js';
 import http from 'k6/http';
 import { check } from 'k6';
 import { getApiUrl, tenantHeaders } from '../helpers/http.js';
@@ -14,7 +15,7 @@ export function buildReceiveItemPayload(workOrderId, poItemVariantId) {
     return {
         ...payload,
         workOrderId,
-        grnNumber: `GRN-K6-${Date.now()}`,
+        grnNumber: `GRN-K6-${uniqueId()}`,
         receivedAt: new Date().toISOString(),
         items: payload.items.map((item) => ({
             ...item,

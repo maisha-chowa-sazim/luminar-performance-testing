@@ -1,3 +1,4 @@
+import { uniqueId } from '../helpers/unique-id.js';
 import http from 'k6/http';
 import { check } from 'k6';
 
@@ -8,7 +9,7 @@ function getEnvValue(name, fallback = '') {
 }
 
 export function buildStylePayload() {
-    const suffix = Date.now();
+    const suffix = uniqueId();
     const base = JSON.parse(JSON.stringify(styleFixture));
 
     return {
