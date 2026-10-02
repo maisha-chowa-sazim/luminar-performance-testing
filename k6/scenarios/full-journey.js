@@ -1,6 +1,6 @@
 import { check } from 'k6';
 import { approveResource } from '../helpers/approvals.js';
-import { login, setupAuth } from '../helpers/auth.js';
+import { login } from '../helpers/auth.js';
 import { createBom, getCreatedBomId } from '../flows/bom.js';
 import { createPreCosting, getCreatedPreCostingId, submitPreCostingForApproval } from '../flows/pre-costing.js';
 import { createPurchaseOrder, getCreatedPurchaseOrderId } from '../flows/purchase-order.js';
@@ -16,8 +16,6 @@ import {
 import { createStyle, getCreatedStyleId, getStyleDetails } from '../flows/style.js';
 import { createTechPack } from '../flows/tech-pack.js';
 import { FUNCTIONAL_THRESHOLDS } from '../config/functional-thresholds.js';
-
-export { setupAuth as setup } from '../helpers/auth.js';
 
 export const options = {
     vus: 1,
@@ -37,8 +35,12 @@ function isSuccessful(resp, expectedStatus) {
     }
 }
 
-function executeJourney(data) {
-    const merchandiserToken = data?.token || '';
+function executeJourney() {
+    const merchandiser = login('merchandiser');
+    if (!merchandiser?.token) {
+        return;
+    }
+    const merchandiserToken = merchandiser.token;
     const styleResponse = createStyle(merchandiserToken);
     const styleId = getCreatedStyleId(styleResponse);
     if (!styleId) {
@@ -162,10 +164,10 @@ function executeJourney(data) {
     return isSuccessful(grnResponse, 201);
 }
 
-export default function (data) {
+export default function () {
     let completed = false;
     try {
-        completed = executeJourney(data) === true;
+        completed = executeJourney() === true;
         return completed;
     } finally {
         check(completed, {

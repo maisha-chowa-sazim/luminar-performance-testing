@@ -1,7 +1,6 @@
 import { sleep } from 'k6';
 import { Counter, Rate, Trend } from 'k6/metrics';
 import journey from '../scenarios/full-journey.js';
-import { setupAuth } from '../helpers/auth.js';
 
 const started = new Counter('journey_started');
 const completed = new Counter('journey_completed');
@@ -16,16 +15,16 @@ export function setup() {
         required.push(`${role}_EMAIL`, `${role}_PASSWORD`);
     }
     for (const key of required) if (!String(__ENV[key] || '').trim()) throw new Error(`Missing ${key}`);
-    return setupAuth();
+    return true;
 }
 
-export default function (data) {
+export default function () {
     started.add(1);
     completed.add(0);
     const start = Date.now();
     let ok = false;
     try {
-        ok = journey(data) === true;
+        ok = journey() === true;
     } finally {
         success.add(ok);
         if (ok) completed.add(1);

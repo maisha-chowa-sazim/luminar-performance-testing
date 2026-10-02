@@ -25,9 +25,20 @@ export function getUserCredentials(role) {
         throw new Error(`Unknown role: ${role}`);
     }
 
+    const accountCount = Number(getEnvValue(`${config.accountsEnvPrefix}_ACCOUNT_COUNT`, '0'));
+    const accountNumber = accountCount > 0
+        ? ((Math.max(1, Number(__VU) || 1) - 1) % accountCount) + 1
+        : 0;
+    const accountEmail = accountNumber
+        ? getEnvValue(`${config.accountsEnvPrefix}_ACCOUNT_${accountNumber}_EMAIL`)
+        : '';
+    const accountPassword = accountNumber
+        ? getEnvValue(`${config.accountsEnvPrefix}_ACCOUNT_${accountNumber}_PASSWORD`)
+        : '';
+
     return {
-        email: getEnvValue(config.emailEnvKey),
-        password: getEnvValue(config.passwordEnvKey),
+        email: accountEmail || getEnvValue(config.emailEnvKey),
+        password: accountPassword || getEnvValue(config.passwordEnvKey),
         role: config.role,
     };
 }

@@ -34,9 +34,12 @@ test('real k6 report pipeline produces PDF/HTML and preserves failed exit codes 
         const name = `report-selftest-${mode}-${process.pid}`;
         const scenario = `k6/scenarios/${name}.js`;
         // Synthetic counter named http_reqs exercises report plumbing only; no API is contacted.
-        await writeFile(scenario, `import { Counter } from 'k6/metrics';\nimport { check } from 'k6';\nconst requests = new Counter('http_reqs');\nexport const options = { vus: 1, iterations: 1, thresholds: { checks: ['rate==1'] } };\nexport function setup() { ${mode === 'setup-error' ? "throw new Error('Synthetic setup failure');" : ''} }\nexport default function () { requests.add(1); check(true, { 'SYNTHETIC report plumbing only': () => ${mode === 'pass'} }); }\n`);
+        await writeFile(scenario, `import { Counter } from 'k6/metrics';\nimport { check, sleep } from 'k6';\nconst requests = new Counter('http_reqs');\nexport const options = { vus: 1, iterations: 1, thresholds: { checks: ['rate==1'] } };\nexport function setup() { ${mode === 'setup-error' ? "throw new Error('Synthetic setup failure');" : ''} }\nexport default function () { requests.add(1); check(true, { 'SYNTHETIC report plumbing only': () => ${mode === 'pass'} }); ${mode === 'pass' ? 'sleep(4);' : ''} }\n`);
         try {
-            const run = spawnSync(process.execPath, ['k6/reporting/run.mjs', name], { encoding: 'utf8' });
+            const run = spawnSync(process.execPath, ['k6/reporting/run.mjs', ...(mode === 'pass' ? ['--dashboard'] : []), name], {
+                encoding: 'utf8',
+                env: { ...process.env, K6_WEB_DASHBOARD_OPEN: 'false', K6_WEB_DASHBOARD_PERIOD: '1s' },
+            });
             assert.equal(run.status, mode === 'pass' ? 0 : mode === 'fail' ? 99 : 107, run.stdout + run.stderr);
             const dirs = (await readdir('k6/results')).filter(d => d.includes(name));
             assert.equal(dirs.length, 1);
@@ -46,6 +49,10 @@ test('real k6 report pipeline produces PDF/HTML and preserves failed exit codes 
             assert.match(pdf.toString(), /%%EOF/);
             const html = await readFile(`${dir}/report.html`, 'utf8');
             assert.match(html, new RegExp(`<strong>${mode === 'pass' ? 'PASS' : mode === 'fail' ? 'FAIL' : 'INCOMPLETE'}</strong>`));
+            if (mode === 'pass') {
+                const dashboardHtml = await readFile(`${dir}/k6-dashboard.html`, 'utf8').catch(() => '');
+                assert.match(dashboardHtml, /k6/i, run.stdout + run.stderr);
+            }
             if (mode !== 'setup-error') assert.match(html, /SYNTHETIC report plumbing only/);
         } finally { await rm(scenario, { force: true }); }
     }

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test:smoke": "node k6/reporting/run.mjs smoke",
+    "test:dashboard": "node k6/reporting/run.mjs --dashboard",
     "test:performance": "node k6/reporting/run.mjs",
     "test:reporting": "node --test k6/tests/*.test.mjs",
     "test:load:5": "node k6/reporting/run.mjs load-5-users",

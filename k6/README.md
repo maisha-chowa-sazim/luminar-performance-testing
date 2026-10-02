@@ -93,6 +93,14 @@ Every runner invocation creates `k6/results/<UTC timestamp>-<scenario>-<unique I
 - `summary.json`: k6 aggregate metrics, when k6 reaches summary generation.
 - `metadata.json`: scenario, UTC times, revision (including dirty-tree marker), engine version and exit status.
 
+To open k6's live web dashboard and export its standalone HTML report into the same run directory:
+
+```bash
+npm run test:dashboard -- load-5-users
+```
+
+Replace `load-5-users` with any scenario name under `scenarios/`. The dashboard opens at `http://localhost:5665`; close its browser tab when finished so k6 can exit and the regular PDF/HTML reports can complete. The dashboard can take over a minute to show graphs for very short tests.
+
 The runner prints the PDF path and preserves nonzero k6 exit codes. Setup/initialization failures still produce an incomplete report when the runner can finish; missing metrics are shown as N/A. Hard termination of the runner (SIGKILL), disk failure or missing Node dependencies can prevent report generation. Console diagnostics remain in the terminal and are not embedded in stakeholder reports.
 
 Reports aggregate the entire execution, including setup and ramps. They do not prove steady-state-only performance or a breaking point. Use server metrics and k6 time-series output separately for saturation/recovery analysis. Do not override the load schedule through `K6_*` environment settings when comparing the documented profiles; edit the shared profile configuration deliberately. The runner uses the legacy `handleSummary` schema explicitly for consistent report parsing.

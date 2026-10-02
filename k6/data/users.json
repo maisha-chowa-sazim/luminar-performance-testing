@@ -2,11 +2,13 @@
     "merchandiser": {
         "emailEnvKey": "MERCHANDISER_EMAIL",
         "passwordEnvKey": "MERCHANDISER_PASSWORD",
+        "accountsEnvPrefix": "MERCHANDISER",
         "role": "merchandiser"
     },
     "inventory": {
         "emailEnvKey": "INVENTORY_EMAIL",
         "passwordEnvKey": "INVENTORY_PASSWORD",
+        "accountsEnvPrefix": "INVENTORY",
         "role": "inventory"
     },
     "executive": {

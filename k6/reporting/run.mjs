@@ -10,12 +10,15 @@ const root = fileURLToPath(new URL('../../', import.meta.url));
 process.chdir(root);
 // Node's parser handles quoted dotenv values without executing shell code.
 if (existsSync('.env')) process.loadEnvFile('.env');
-const input = process.argv[2] || 'smoke';
-if (!/^[a-z0-9-]+(?:\.js)?$/.test(input) || process.argv.length > 3) {
-    throw new Error('Usage: node k6/reporting/run.mjs <scenario-name> (no k6 flag overrides)');
+const args = process.argv.slice(2);
+const dashboardMode = args[0] === '--dashboard';
+const input = (dashboardMode ? args[1] : args[0]) || 'smoke';
+if (!/^[a-z0-9-]+(?:\.js)?$/.test(input) || args.length > (dashboardMode ? 2 : 1)) {
+    throw new Error('Usage: node k6/reporting/run.mjs [--dashboard] [scenario-name]');
 }
 const scenario = input.replace(/\.js$/, '');
 if (!existsSync(`k6/scenarios/${scenario}.js`)) throw new Error(`Unknown scenario: ${scenario}`);
+const dashboardEnabled = dashboardMode || process.env.K6_WEB_DASHBOARD === 'true';
 const directory = path.join(root, 'k6/results', `${new Date().toISOString().replace(/[:.]/g, '-')}-${scenario}-${randomUUID().slice(0,8)}`);
 await mkdir(directory, { recursive: true });
 const temporary = await mkdtemp(path.join(root, 'k6/scenarios/.report-'));
@@ -33,8 +36,18 @@ const metadata = {
 const start = Date.now();
 let interrupted = false;
 try {
+    const childEnvironment = { ...process.env, K6_SUMMARY_MODE: 'full' };
+    if (dashboardEnabled) {
+        childEnvironment.K6_WEB_DASHBOARD = 'true';
+        childEnvironment.K6_WEB_DASHBOARD_OPEN ??= 'true';
+        childEnvironment.K6_WEB_DASHBOARD_EXPORT ||= path.join(directory, 'k6-dashboard.html');
+        const host = childEnvironment.K6_WEB_DASHBOARD_HOST || 'localhost';
+        const port = childEnvironment.K6_WEB_DASHBOARD_PORT || '5665';
+        console.log(`k6 web dashboard: http://${host}:${port}`);
+        console.log(`Dashboard HTML export: ${childEnvironment.K6_WEB_DASHBOARD_EXPORT}`);
+    }
     const child = spawn('k6', ['run', '--no-usage-report', '--new-machine-readable-summary=false', '--summary-trend-stats=avg,min,med,max,p(90),p(95),p(99)', wrapper], {
-        stdio: 'inherit', env: { ...process.env, K6_SUMMARY_MODE: 'full' },
+        stdio: 'inherit', env: childEnvironment,
     });
     const interrupt = signal => { interrupted = true; child.kill(signal); };
     const onInt = () => interrupt('SIGINT');
@@ -56,6 +69,7 @@ try {
     await writeFile(path.join(directory, 'metadata.json'), JSON.stringify(metadata, null, 2));
     const status = await writeReports(directory, summary, metadata);
     console.log(`\n${status}: ${directory}/report.pdf\nHTML, summary JSON (when available), and metadata are in the same directory.`);
+    if (dashboardEnabled) console.log(`k6 dashboard report: ${childEnvironment.K6_WEB_DASHBOARD_EXPORT}`);
     process.exitCode = metadata.exitCode || (status === 'PASS' || status === 'UNASSESSED' ? 0 : 1);
 } finally {
     await rm(temporary, { recursive: true, force: true });
