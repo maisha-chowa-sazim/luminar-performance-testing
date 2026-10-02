@@ -1,7 +1,7 @@
 {
-    "buyerId": "05f2b123-1eff-4afb-b6e2-163c610cbe29",
+    "buyerId": "b061f588-f910-4f80-81cc-49c290693cd0",
     "buyerPoNumber": "BPO-123446",
-    "paymentProviderId": "2e303013-2d02-45a4-a1be-77c52a064589",
+    "paymentProviderId": "921ae40c-8974-4b9c-8754-35f2926c03a4",
     "styles": [
         {
             "styleId": "570928a2-4720-48b5-a608-91048b2c5d7a",
@@ -19,7 +19,7 @@
         {
             "shipmentMode": "AIR",
             "shipmentDate": "2026-09-28",
-            "portOfDestination": "Constanta",
+            "portOfDestination": "Heathrow",
             "deliveryNumber": null,
             "orderItems": [
                 {

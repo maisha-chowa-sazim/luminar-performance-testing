@@ -4,7 +4,7 @@
   "items": [
     {
       "measurableItemId": "d5ff9df2-bde4-4515-a7a5-de0412097ced",
-      "supplierId": "623f8709-c648-43ca-9940-5c06d1292c8e",
+      "supplierId": "b55388c3-a718-481d-8ecf-e7a8b1fe9cc0",
       "variantType": "OTHER",
       "unitPriceCurrency": "USD",
       "variants": [
@@ -44,5 +44,5 @@
     }
   ],
   "isDraft": false,
-  "buyerId": "05f2b123-1eff-4afb-b6e2-163c610cbe29"
+  "buyerId": "b061f588-f910-4f80-81cc-49c290693cd0"
 }

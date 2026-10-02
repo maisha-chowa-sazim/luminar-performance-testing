@@ -2,13 +2,15 @@ import { uniqueId } from '../helpers/unique-id.js';
 import http from 'k6/http';
 import { check } from 'k6';
 
+const purchaseFixture = JSON.parse(open('../data/purchase.json'));
+
 function getEnvValue(name, fallback = '') {
     return String(__ENV[name] ?? fallback).trim();
 }
 
 export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOverride = '') {
     const styleId = styleIdOverride || getEnvValue('LUMINAR_STYLE_ID', '570928a2-4720-48b5-a608-91048b2c5d7a');
-    const buyerId = getEnvValue('LUMINAR_BUYER_ID', '05f2b123-1eff-4afb-b6e2-163c610cbe29');
+    const buyerId = getEnvValue('LUMINAR_BUYER_ID', purchaseFixture.buyerId);
     const styleComboId = styleComboIdOverride || getEnvValue('LUMINAR_STYLE_COMBO_ID', '5d6c66a8-729d-430e-b790-da534e68ab14');
 
     if (styleIdOverride && !styleComboIdOverride) {
@@ -22,7 +24,7 @@ export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOver
     return {
         buyerId,
         buyerPoNumber: `BPO-${uniqueId()}`,
-        paymentProviderId: getEnvValue('LUMINAR_PAYMENT_PROVIDER_ID', '2e303013-2d02-45a4-a1be-77c52a064589'),
+        paymentProviderId: getEnvValue('LUMINAR_PAYMENT_PROVIDER_ID', purchaseFixture.paymentProviderId),
         styles: [{ styleId, selectedStyleComboIds: styleComboIdOverride ? [styleComboId] : [] }],
         teamId: null,
         productionFlow: ['CUTTING', 'SEWING', 'FINISHING', 'PACKING'],
@@ -30,7 +32,7 @@ export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOver
             {
                 shipmentMode: 'AIR',
                 shipmentDate: getEnvValue('LUMINAR_SHIPMENT_DATE', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)),
-                portOfDestination: 'Constanta',
+                portOfDestination: purchaseFixture.shipments[0].portOfDestination,
                 deliveryNumber: null,
                 orderItems: [
                     {

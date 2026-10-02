@@ -1,6 +1,6 @@
 {
     "name": "Crop top",
-    "buyerId": "05f2b123-1eff-4afb-b6e2-163c610cbe29",
+    "buyerId": "b061f588-f910-4f80-81cc-49c290693cd0",
     "styleStatus": "DEVELOPMENT",
     "divisions": [
         "Casual Wear"
@@ -9,7 +9,7 @@
     "season": "2026 Spring",
     "collection": "Crop Top Collection",
     "fitType": "Regular Fit",
-    "garmentSizeTemplateId": "a1935b34-e013-4f37-83e7-29196fdd919f",
+    "garmentSizeTemplateId": "a1c03c7d-801b-4880-a5ab-8c29d0bb0b3f",
     "genders": [
         "Womens"
     ],
