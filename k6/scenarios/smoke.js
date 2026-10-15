@@ -17,7 +17,7 @@ export const options = {
 };
 
 export default function (data) {
-    const token = data?.token || __ENV.SAVED_SESSION_TOKEN || '';
+    const token = data?.token || __ENV.SAVED_SESSION_TOKEN;
     const styleResponse = createStyle(token);
     const styleId = getCreatedStyleId(styleResponse);
 

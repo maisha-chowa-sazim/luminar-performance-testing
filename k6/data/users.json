@@ -3,13 +3,177 @@
         "emailEnvKey": "MERCHANDISER_EMAIL",
         "passwordEnvKey": "MERCHANDISER_PASSWORD",
         "accountsEnvPrefix": "MERCHANDISER",
-        "role": "merchandiser"
+        "role": "merchandiser",
+        "accounts": [
+            {
+                "emailEnvKey": "MERCHANDISER_U1_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U1_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U2_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U2_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U3_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U3_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U4_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U4_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U5_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U5_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U6_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U6_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U7_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U7_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U8_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U8_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U9_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U9_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U10_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U10_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U11_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U11_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U12_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U12_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U13_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U13_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U14_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U14_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U15_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U15_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U16_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U16_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U17_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U17_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U18_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U18_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U19_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U19_PASSWORD"
+            },
+            {
+                "emailEnvKey": "MERCHANDISER_U20_EMAIL",
+                "passwordEnvKey": "MERCHANDISER_U20_PASSWORD"
+            }
+        ]
     },
     "inventory": {
         "emailEnvKey": "INVENTORY_EMAIL",
         "passwordEnvKey": "INVENTORY_PASSWORD",
         "accountsEnvPrefix": "INVENTORY",
-        "role": "inventory"
+        "role": "inventory",
+        "accounts": [
+            {
+                "emailEnvKey": "INVENTORY_U1_EMAIL",
+                "passwordEnvKey": "INVENTORY_U1_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U2_EMAIL",
+                "passwordEnvKey": "INVENTORY_U2_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U3_EMAIL",
+                "passwordEnvKey": "INVENTORY_U3_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U4_EMAIL",
+                "passwordEnvKey": "INVENTORY_U4_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U5_EMAIL",
+                "passwordEnvKey": "INVENTORY_U5_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U6_EMAIL",
+                "passwordEnvKey": "INVENTORY_U6_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U7_EMAIL",
+                "passwordEnvKey": "INVENTORY_U7_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U8_EMAIL",
+                "passwordEnvKey": "INVENTORY_U8_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U9_EMAIL",
+                "passwordEnvKey": "INVENTORY_U9_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U10_EMAIL",
+                "passwordEnvKey": "INVENTORY_U10_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U11_EMAIL",
+                "passwordEnvKey": "INVENTORY_U11_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U12_EMAIL",
+                "passwordEnvKey": "INVENTORY_U12_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U13_EMAIL",
+                "passwordEnvKey": "INVENTORY_U13_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U14_EMAIL",
+                "passwordEnvKey": "INVENTORY_U14_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U15_EMAIL",
+                "passwordEnvKey": "INVENTORY_U15_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U16_EMAIL",
+                "passwordEnvKey": "INVENTORY_U16_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U17_EMAIL",
+                "passwordEnvKey": "INVENTORY_U17_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U18_EMAIL",
+                "passwordEnvKey": "INVENTORY_U18_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U19_EMAIL",
+                "passwordEnvKey": "INVENTORY_U19_PASSWORD"
+            },
+            {
+                "emailEnvKey": "INVENTORY_U20_EMAIL",
+                "passwordEnvKey": "INVENTORY_U20_PASSWORD"
+            }
+        ]
     },
     "executive": {
         "emailEnvKey": "EXECUTIVE_EMAIL",

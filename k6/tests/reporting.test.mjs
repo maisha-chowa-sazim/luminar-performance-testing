@@ -16,9 +16,20 @@ test('assessment never labels missing data or failed execution as passing', () =
     assert.equal(reportModel({ metrics: { http_reqs: { values: { count: 2 } } } }, { exitCode: 0 }).status, 'UNASSESSED');
 });
 test('all profiles load in k6 with expected stages and completion gates', () => {
-    const totals = { 5: 300, 10: 1080, 20: 600, 50: 480, 100: 300 };
+    const totals = { 5: 300, 10: 1080, 20: 600 };
+    const env = {
+        ...process.env,
+        LOGIN_SETUP_TIMEOUT: '30m',
+        LOGIN_DELAY_SECONDS: '1',
+        LOGIN_MAX_RETRIES: '2',
+        LOGIN_MAX_RETRY_WAIT_SECONDS: '120',
+        THINK_TIME_SECONDS: '3',
+    };
     for (const [users, seconds] of Object.entries(totals)) {
-        const result = spawnSync('k6', ['inspect', `k6/scenarios/load-${users}-users.js`], { encoding: 'utf8' });
+        const result = spawnSync('k6', ['inspect', '--include-system-env-vars', `k6/scenarios/load-${users}-users.js`], {
+            encoding: 'utf8',
+            env,
+        });
         assert.equal(result.status, 0, result.stderr);
         const options = JSON.parse(result.stdout);
         const scenario = options.scenarios.full_journey;

@@ -5,10 +5,6 @@ import { getApiUrl, tenantHeaders } from '../helpers/http.js';
 
 const receiveItemFixture = JSON.parse(open('../data/recieve-item.json'));
 
-function getEnvValue(name, fallback = '') {
-    return String(__ENV[name] ?? fallback).trim();
-}
-
 export function buildReceiveItemPayload(workOrderId, poItemVariantId) {
     const payload = JSON.parse(JSON.stringify(receiveItemFixture));
 

@@ -1,13 +1,9 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { approveResource } from '../helpers/approvals.js';
-import { getApiUrl, tenantHeaders } from '../helpers/http.js';
+import { getApiUrl, requiredEnvValue, tenantHeaders } from '../helpers/http.js';
 
 const workOrderFixture = JSON.parse(open('../data/work-order.json'));
-
-function getEnvValue(name, fallback = '') {
-    return String(__ENV[name] ?? fallback).trim();
-}
 
 export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', styleId = '') {
     const payload = JSON.parse(JSON.stringify(workOrderFixture));
@@ -15,7 +11,7 @@ export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', style
     return {
         ...payload,
         reservationId,
-        buyerId: getEnvValue('LUMINAR_BUYER_ID', payload.buyerId),
+        buyerId: requiredEnvValue('LUMINAR_BUYER_ID'),
         items: payload.items.map((item) => ({
             ...item,
             variants: item.variants.map((variant) => ({

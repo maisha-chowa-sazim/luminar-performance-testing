@@ -1,12 +1,9 @@
 import { uniqueId } from '../helpers/unique-id.js';
 import http from 'k6/http';
 import { check } from 'k6';
+import { requiredEnvValue } from '../helpers/http.js';
 
 const styleFixture = JSON.parse(open('../data/style.json'));
-
-function getEnvValue(name, fallback = '') {
-    return String(__ENV[name] ?? fallback).trim();
-}
 
 export function buildStylePayload() {
     const suffix = uniqueId();
@@ -15,14 +12,14 @@ export function buildStylePayload() {
     return {
         ...base,
         name: `${base.name} ${suffix}`,
-        buyerId: getEnvValue('LUMINAR_BUYER_ID', base.buyerId),
+        buyerId: requiredEnvValue('LUMINAR_BUYER_ID'),
     };
 }
 
 export function createStyle(token) {
-    const baseUrl = getEnvValue('BASE_URL', 'http://localhost:5000');
-    const factoryId = getEnvValue('LUMINAR_FACTORY_ID', '2f7e5d9a-3c1b-4e8f-9a6d-1b2c3d4e5f60');
-    const organizationId = getEnvValue('LUMINAR_ORGANIZATION_ID', '0e3c4b48-c231-4252-9be7-aafb4a647d05');
+    const baseUrl = requiredEnvValue('BASE_URL');
+    const factoryId = requiredEnvValue('LUMINAR_FACTORY_ID');
+    const organizationId = requiredEnvValue('LUMINAR_ORGANIZATION_ID');
     const payload = buildStylePayload();
 
     const resp = http.post(`${baseUrl}/api/v1/styles`, JSON.stringify(payload), {
@@ -76,9 +73,9 @@ export function getCreatedStyleId(resp) {
 }
 
 export function getStyleDetails(token, styleId) {
-    const baseUrl = getEnvValue('BASE_URL', 'http://localhost:5000');
-    const factoryId = getEnvValue('LUMINAR_FACTORY_ID', '2f7e5d9a-3c1b-4e8f-9a6d-1b2c3d4e5f60');
-    const organizationId = getEnvValue('LUMINAR_ORGANIZATION_ID', '0e3c4b48-c231-4252-9be7-aafb4a647d05');
+    const baseUrl = requiredEnvValue('BASE_URL');
+    const factoryId = requiredEnvValue('LUMINAR_FACTORY_ID');
+    const organizationId = requiredEnvValue('LUMINAR_ORGANIZATION_ID');
     const resp = http.get(`${baseUrl}/api/v1/styles/${styleId}`, {
         headers: {
             Accept: 'application/json, text/plain, */*',

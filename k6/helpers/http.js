@@ -1,5 +1,9 @@
-function getEnvValue(name, fallback = '') {
-    return String(__ENV[name] ?? fallback).trim();
+export function requiredEnvValue(name) {
+    const value = __ENV[name];
+    if (typeof value !== 'string' || !value.trim()) {
+        throw new Error(`${name} is required`);
+    }
+    return value.trim();
 }
 
 export function baseHeaders(token = null) {
@@ -13,11 +17,11 @@ export function baseHeaders(token = null) {
 export function tenantHeaders(token = null) {
     return {
         ...baseHeaders(token),
-        'x-factory-id': getEnvValue('LUMINAR_FACTORY_ID', '2f7e5d9a-3c1b-4e8f-9a6d-1b2c3d4e5f60'),
-        'x-organization-id': getEnvValue('LUMINAR_ORGANIZATION_ID', '0e3c4b48-c231-4252-9be7-aafb4a647d05'),
+        'x-factory-id': requiredEnvValue('LUMINAR_FACTORY_ID'),
+        'x-organization-id': requiredEnvValue('LUMINAR_ORGANIZATION_ID'),
     };
 }
 
 export function getApiUrl(path) {
-    return `${getEnvValue('BASE_URL', 'http://localhost:5000')}${path}`;
+    return `${requiredEnvValue('BASE_URL')}${path}`;
 }

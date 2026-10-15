@@ -10,6 +10,8 @@ export const PROFILES = {
 export function performanceOptions(users) {
     const profile = PROFILES[users];
     if (!profile) throw new Error(`Unsupported load: ${users}`);
+    const setupTimeout = __ENV.LOGIN_SETUP_TIMEOUT;
+    if (!setupTimeout?.trim()) throw new Error('LOGIN_SETUP_TIMEOUT is required');
     const endpointMetrics = {};
     for (const name of ['login_sign_in_email', 'style_create', 'style_get', 'sample_create', 'tech_pack_upload_urls', 'tech_pack_file_upload', 'tech_pack_create', 'bom_create', 'pre_costing_create', 'pre_costing_submit', 'purchase_order_create', 'work_order_reserve_number', 'work_order_create', 'work_order_sent_to_supplier', 'grn_create', 'approval_purchase_order', 'approval_bom', 'approval_costing', 'approval_work_order']) {
         for (const metric of ['http_req_duration', 'http_req_failed', 'http_reqs']) {
@@ -17,6 +19,7 @@ export function performanceOptions(users) {
         }
     }
     return {
+        setupTimeout,
         scenarios: {
             full_journey: {
                 executor: 'ramping-vus', startVUs: 0,
@@ -30,8 +33,8 @@ export function performanceOptions(users) {
         thresholds: {
             ...endpointMetrics,
             // Provisional acceptance targets: agree these with product owners.
-            http_req_failed: ['rate<0.01'],
-            http_req_duration: ['p(95)<3000', 'p(99)<5000'],
+            'http_req_failed{scenario:full_journey}': ['rate<0.01'],
+            'http_req_duration{scenario:full_journey}': ['p(95)<3000', 'p(99)<5000'],
             checks: ['rate>0.99'],
             journey_success: ['rate>0.99'],
             journey_started: ['count>0'],

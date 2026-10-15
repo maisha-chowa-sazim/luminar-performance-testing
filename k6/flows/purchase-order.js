@@ -1,15 +1,11 @@
 import { uniqueId } from '../helpers/unique-id.js';
 import http from 'k6/http';
 import { check } from 'k6';
-
-function getEnvValue(name, fallback = '') {
-    return String(__ENV[name] ?? fallback).trim();
-}
+import { requiredEnvValue } from '../helpers/http.js';
 
 export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOverride = '') {
-    const styleId = styleIdOverride || getEnvValue('LUMINAR_STYLE_ID', '570928a2-4720-48b5-a608-91048b2c5d7a');
-    const buyerId = getEnvValue('LUMINAR_BUYER_ID', '05f2b123-1eff-4afb-b6e2-163c610cbe29');
-    const styleComboId = styleComboIdOverride || getEnvValue('LUMINAR_STYLE_COMBO_ID', '5d6c66a8-729d-430e-b790-da534e68ab14');
+    const styleId = styleIdOverride || requiredEnvValue('LUMINAR_STYLE_ID');
+    const buyerId = requiredEnvValue('LUMINAR_BUYER_ID');
 
     if (styleIdOverride && !styleComboIdOverride) {
         return {
@@ -19,17 +15,18 @@ export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOver
         };
     }
 
+    const styleComboId = styleComboIdOverride || requiredEnvValue('LUMINAR_STYLE_COMBO_ID');
     return {
         buyerId,
         buyerPoNumber: `BPO-${uniqueId()}`,
-        paymentProviderId: getEnvValue('LUMINAR_PAYMENT_PROVIDER_ID', '2e303013-2d02-45a4-a1be-77c52a064589'),
+        paymentProviderId: requiredEnvValue('LUMINAR_PAYMENT_PROVIDER_ID'),
         styles: [{ styleId, selectedStyleComboIds: styleComboIdOverride ? [styleComboId] : [] }],
         teamId: null,
         productionFlow: ['CUTTING', 'SEWING', 'FINISHING', 'PACKING'],
         shipments: [
             {
                 shipmentMode: 'AIR',
-                shipmentDate: getEnvValue('LUMINAR_SHIPMENT_DATE', new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)),
+                shipmentDate: requiredEnvValue('LUMINAR_SHIPMENT_DATE'),
                 portOfDestination: 'Constanta',
                 deliveryNumber: null,
                 orderItems: [
@@ -57,11 +54,11 @@ export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOver
 }
 
 export function createPurchaseOrder(token, styleId = '', styleComboId = '') {
-    const baseUrl = getEnvValue('BASE_URL');
-    const factoryId = getEnvValue('LUMINAR_FACTORY_ID');
-    const organizationId = getEnvValue('LUMINAR_ORGANIZATION_ID');
+    const baseUrl = requiredEnvValue('BASE_URL');
+    const factoryId = requiredEnvValue('LUMINAR_FACTORY_ID');
+    const organizationId = requiredEnvValue('LUMINAR_ORGANIZATION_ID');
     const payload = buildPurchaseOrderPayload(styleId, styleComboId);
-    const activeToken = token || __ENV.SAVED_SESSION_TOKEN || '';
+    const activeToken = token || __ENV.SAVED_SESSION_TOKEN;
 
     const resp = http.post(`${baseUrl}/api/v1/purchase-orders`, JSON.stringify(payload), {
         headers: {

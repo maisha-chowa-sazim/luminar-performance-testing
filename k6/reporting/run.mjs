@@ -11,9 +11,10 @@ process.chdir(root);
 // Node's parser handles quoted dotenv values without executing shell code.
 if (existsSync('.env')) process.loadEnvFile('.env');
 const args = process.argv.slice(2);
-const dashboardMode = args[0] === '--dashboard';
-const input = (dashboardMode ? args[1] : args[0]) || 'smoke';
-if (!/^[a-z0-9-]+(?:\.js)?$/.test(input) || args.length > (dashboardMode ? 2 : 1)) {
+const dashboardMode = args.includes('--dashboard');
+const scenarioArgs = args.filter(arg => arg !== '--dashboard');
+const input = scenarioArgs[0] || 'smoke';
+if (!/^[a-z0-9-]+(?:\.js)?$/.test(input) || scenarioArgs.length > 1 || args.length > (dashboardMode ? 2 : 1)) {
     throw new Error('Usage: node k6/reporting/run.mjs [--dashboard] [scenario-name]');
 }
 const scenario = input.replace(/\.js$/, '');
@@ -39,14 +40,19 @@ try {
     const childEnvironment = { ...process.env, K6_SUMMARY_MODE: 'full' };
     if (dashboardEnabled) {
         childEnvironment.K6_WEB_DASHBOARD = 'true';
-        childEnvironment.K6_WEB_DASHBOARD_OPEN ??= 'true';
+        childEnvironment.K6_WEB_DASHBOARD_OPEN ??= childEnvironment.K6_WEB_DASHBOARD_PORT === '-1' ? 'false' : 'true';
         childEnvironment.K6_WEB_DASHBOARD_EXPORT ||= path.join(directory, 'k6-dashboard.html');
         const host = childEnvironment.K6_WEB_DASHBOARD_HOST || 'localhost';
         const port = childEnvironment.K6_WEB_DASHBOARD_PORT || '5665';
-        console.log(`k6 web dashboard: http://${host}:${port}`);
+        if (port === '-1') {
+            console.log('k6 web dashboard: HTML export only (HTTP server disabled)');
+        } else {
+            console.log(`k6 web dashboard: http://${host}:${port}`);
+            console.log('Close the dashboard tab after the test so k6 can exit and finish PDF/HTML reporting.');
+        }
         console.log(`Dashboard HTML export: ${childEnvironment.K6_WEB_DASHBOARD_EXPORT}`);
     }
-    const child = spawn('k6', ['run', '--no-usage-report', '--new-machine-readable-summary=false', '--summary-trend-stats=avg,min,med,max,p(90),p(95),p(99)', wrapper], {
+    const child = spawn('k6', ['run', '--include-system-env-vars', '--no-usage-report', '--new-machine-readable-summary=false', '--summary-trend-stats=avg,min,med,max,p(90),p(95),p(99)', wrapper], {
         stdio: 'inherit', env: childEnvironment,
     });
     const interrupt = signal => { interrupted = true; child.kill(signal); };
@@ -65,7 +71,12 @@ try {
     try { summary = JSON.parse(await readFile(summaryPath, 'utf8')); }
     catch { metadata.error ||= 'No valid summary produced; initialization failure or interrupted execution.'; }
     const ramp = summary?.configuredOptions?.scenarios?.full_journey;
-    if (ramp?.stages) metadata.profile = `ramping-vus from ${ramp.startVUs} VUs: ${ramp.stages.map(s => `${s.duration} to ${s.target} VUs`).join(' / ')}; graceful ramp-down ${ramp.gracefulRampDown}, stop ${ramp.gracefulStop}; think time ${process.env.THINK_TIME_SECONDS || 3}s`;
+    if (ramp?.stages) {
+        const thinkTime = process.env.THINK_TIME_SECONDS;
+        metadata.profile = `ramping-vus from ${ramp.startVUs} VUs: ${ramp.stages.map(s => `${s.duration} to ${s.target} VUs`).join(' / ')}; graceful ramp-down ${ramp.gracefulRampDown}, stop ${ramp.gracefulStop}; think time ${thinkTime ? `${thinkTime}s` : 'not configured'}`;
+    }
+    const arrival = summary?.configuredOptions?.scenarios?.arrival_journey;
+    if (arrival) metadata.profile = `${arrival.executor}: ${arrival.rate} journeys per ${arrival.timeUnit}, duration ${arrival.duration}, ${arrival.preAllocatedVUs} preallocated VUs; paced authentication in setup; sessions reused`;
     await writeFile(path.join(directory, 'metadata.json'), JSON.stringify(metadata, null, 2));
     const status = await writeReports(directory, summary, metadata);
     console.log(`\n${status}: ${directory}/report.pdf\nHTML, summary JSON (when available), and metadata are in the same directory.`);

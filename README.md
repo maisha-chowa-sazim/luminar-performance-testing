@@ -1,6 +1,6 @@
 # Luminar k6 performance testing
 
-Reusable API business flows, functional smoke tests and five ramped full-journey load profiles (5, 10, 20, 50 and 100 concurrent VUs).
+Reusable API business flows, functional smoke tests and a configurable arrival-rate journey test and ramped profiles (5, 10 and 20 concurrent VUs).
 
 Use Node.js 22+ and k6 (validated with 2.2.0). Configure local `.env` credentials, tenant IDs and seeded QA data as described in the [k6 run guide](k6/README.md). The npm runner loads `.env` automatically.
 
@@ -10,6 +10,8 @@ npm run test:smoke
 npm run test:load:5
 # Open the live k6 dashboard and export its standalone HTML report:
 npm run test:dashboard -- load-5-users
+# Or add the dashboard to an existing load command:
+npm run test:load:5 -- --dashboard
 # Any existing scenario, with automatic PDF reporting:
 npm run test:performance -- full-journey
 ```

@@ -35,8 +35,8 @@ function isSuccessful(resp, expectedStatus) {
     }
 }
 
-function executeJourney() {
-    const merchandiser = login('merchandiser');
+function executeJourney(sessions) {
+    const merchandiser = (sessions ? sessions.merchandiser : login('merchandiser'));
     if (!merchandiser?.token) {
         return;
     }
@@ -105,7 +105,7 @@ function executeJourney() {
         return;
     }
 
-    const executive = login('executive');
+    const executive = (sessions ? sessions.executive : login('executive'));
     if (!executive?.token) {
         return;
     }
@@ -140,7 +140,7 @@ function executeJourney() {
         return;
     }
 
-    const seniorMerchandiser = login('seniorMerchandiser');
+    const seniorMerchandiser = (sessions ? sessions.seniorMerchandiser : login('seniorMerchandiser'));
     if (!seniorMerchandiser?.token) {
         return;
     }
@@ -155,7 +155,7 @@ function executeJourney() {
         return;
     }
 
-    const inventory = login('inventory');
+    const inventory = (sessions ? sessions.inventory : login('inventory'));
     if (!inventory?.token) {
         return;
     }
@@ -164,10 +164,10 @@ function executeJourney() {
     return isSuccessful(grnResponse, 201);
 }
 
-export default function () {
+export default function (sessions) {
     let completed = false;
     try {
-        completed = executeJourney() === true;
+        completed = executeJourney(sessions) === true;
         return completed;
     } finally {
         check(completed, {

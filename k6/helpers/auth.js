@@ -1,10 +1,11 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { requiredEnvValue } from './http.js';
 
 const users = JSON.parse(open('../data/users.json'));
 
-function getEnvValue(name, fallback = '') {
-    return String(__ENV[name] ?? fallback).trim();
+function getEnvValue(name) {
+    return String(__ENV[name] ?? '').trim();
 }
 
 function parseSessionTokenFromSetCookie(setCookieHeader) {
@@ -25,7 +26,20 @@ export function getUserCredentials(role) {
         throw new Error(`Unknown role: ${role}`);
     }
 
-    const accountCount = Number(getEnvValue(`${config.accountsEnvPrefix}_ACCOUNT_COUNT`, '0'));
+    const configuredAccounts = (config.accounts || []).filter((account) =>
+        getEnvValue(account.emailEnvKey) && getEnvValue(account.passwordEnvKey));
+    if (configuredAccounts.length > 0) {
+        const index = (Math.max(1, Number(__VU) || 1) - 1) % configuredAccounts.length;
+        const account = configuredAccounts[index];
+        return {
+            email: getEnvValue(account.emailEnvKey),
+            password: getEnvValue(account.passwordEnvKey),
+            role: config.role,
+        };
+    }
+
+    const accountCountSetting = getEnvValue(`${config.accountsEnvPrefix}_ACCOUNT_COUNT`);
+    const accountCount = accountCountSetting ? Number(accountCountSetting) : 0;
     const accountNumber = accountCount > 0
         ? ((Math.max(1, Number(__VU) || 1) - 1) % accountCount) + 1
         : 0;
@@ -55,7 +69,7 @@ export function setupAuth() {
 
 export function login(role = 'merchandiser') {
     const credentials = getUserCredentials(role);
-    const baseUrl = getEnvValue('BASE_URL', 'http://localhost:5000');
+    const baseUrl = requiredEnvValue('BASE_URL');
 
     const resp = http.post(
         `${baseUrl}/api/v1/auth/sign-in/email`,
