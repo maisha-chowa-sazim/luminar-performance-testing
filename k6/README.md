@@ -105,14 +105,17 @@ Every runner invocation creates `k6/results/<UTC timestamp>-<scenario>-<unique I
 
 ## Built-in live web dashboard
 
-The runner uses the [standard k6 web dashboard](https://grafana.com/docs/k6/latest/results-output/web-dashboard/) through `K6_WEB_DASHBOARD=true`, `K6_WEB_DASHBOARD_OPEN=true`, and `K6_WEB_DASHBOARD_EXPORT`. No separate Grafana or InfluxDB service is needed.
+The runner automatically enables the [standard k6 web dashboard](https://grafana.com/docs/k6/latest/results-output/web-dashboard/) for scenario names starting with `load-`, including the arrival-rate test. It sets `K6_WEB_DASHBOARD=true`, opens the browser, and exports a standalone HTML report. No separate Grafana or InfluxDB service is needed. The built-in charts show request rate, failures, latency, VUs, and iteration performance over time; use the PDF/HTML stakeholder reports for business-journey completion and endpoint summaries.
 
-To open the live dashboard and save its standalone `k6-dashboard.html` report in the same run directory:
+To open the live dashboard and save its standalone `k6-dashboard.html` report alongside the PDF and summary JSON:
 
 ```bash
-npm run test:dashboard -- load-5-users
-# Enable it on an existing npm scenario command:
-npm run test:load:5 -- --dashboard
+npm run test:load:5
+npm run test:load:10
+npm run test:load:20
+npm run test:load:arrival
+# Enable it explicitly for a functional scenario:
+npm run test:dashboard -- full-journey
 # Select a specific environment:
 node --env-file=.env.dev k6/reporting/run.mjs --dashboard load-arrival-rate
 ```
@@ -126,13 +129,17 @@ The runner respects standard dashboard environment options, supplied in `.env` o
 K6_WEB_DASHBOARD_PORT=5666 K6_WEB_DASHBOARD_PERIOD=5s K6_WEB_DASHBOARD_OPEN=false \
   npm run test:dashboard -- load-5-users
 # Export only, suitable for CI with no live HTTP server:
-K6_WEB_DASHBOARD_PORT=-1 npm run test:dashboard -- load-5-users
+K6_WEB_DASHBOARD_PORT=-1 npm run test:load:5
+# Disable dashboard visualization and export while retaining PDF/HTML reports:
+K6_WEB_DASHBOARD=false npm run test:load:5
 # Native k6 usage (load application environment variables first):
 K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=true \
   k6 run k6/scenarios/load-5-users.js
 ```
 
 `K6_WEB_DASHBOARD_EXPORT` overrides the exported HTML path. Use a different port for concurrent live runs. The dashboard URL is available only while k6 is running; open the saved `k6-dashboard.html` afterward for the built-in report.
+
+An explicit `--dashboard` flag enables visualization even when `K6_WEB_DASHBOARD=false`. Otherwise, an explicit `K6_WEB_DASHBOARD` setting overrides the automatic load-scenario default. Direct `k6 run` still requires the native dashboard variables shown above.
 
 ## Report completion and validation
 

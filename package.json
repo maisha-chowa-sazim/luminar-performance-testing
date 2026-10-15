@@ -10,6 +10,7 @@
     "test:load:5": "node k6/reporting/run.mjs load-5-users",
     "test:load:10": "node k6/reporting/run.mjs load-10-users",
     "test:load:20": "node k6/reporting/run.mjs load-20-users",
+    "test:load:arrival": "node k6/reporting/run.mjs load-arrival-rate",
     "test:load:50": "node k6/reporting/run.mjs load-50-users",
     "test:load:100": "node k6/reporting/run.mjs load-100-users"
   },

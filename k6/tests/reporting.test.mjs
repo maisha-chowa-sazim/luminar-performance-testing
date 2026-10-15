@@ -41,17 +41,25 @@ test('all profiles load in k6 with expected stages and completion gates', () => 
     }
 });
 test('real k6 report pipeline produces PDF/HTML and preserves failed exit codes without network requests', async () => {
-    for (const mode of ['pass', 'fail', 'setup-error']) {
-        const name = `report-selftest-${mode}-${process.pid}`;
+    for (const mode of ['pass', 'dashboard-flag', 'fail', 'setup-error']) {
+        const passing = mode === 'pass' || mode === 'dashboard-flag';
+        const dashboard = passing;
+        const name = `${mode === 'dashboard-flag' ? '' : 'load-'}report-selftest-${mode}-${process.pid}`;
         const scenario = `k6/scenarios/${name}.js`;
         // Synthetic counter named http_reqs exercises report plumbing only; no API is contacted.
-        await writeFile(scenario, `import { Counter } from 'k6/metrics';\nimport { check, sleep } from 'k6';\nconst requests = new Counter('http_reqs');\nexport const options = { vus: 1, iterations: 1, thresholds: { checks: ['rate==1'] } };\nexport function setup() { ${mode === 'setup-error' ? "throw new Error('Synthetic setup failure');" : ''} }\nexport default function () { requests.add(1); check(true, { 'SYNTHETIC report plumbing only': () => ${mode === 'pass'} }); ${mode === 'pass' ? 'sleep(4);' : ''} }\n`);
+        await writeFile(scenario, `import { Counter } from 'k6/metrics';\nimport { check, sleep } from 'k6';\nconst requests = new Counter('http_reqs');\nexport const options = { vus: 1, iterations: 1, thresholds: { checks: ['rate==1'] } };\nexport function setup() { ${mode === 'setup-error' ? "throw new Error('Synthetic setup failure');" : ''} }\nexport default function () { requests.add(1); check(true, { 'SYNTHETIC report plumbing only': () => ${passing} }); ${passing ? 'sleep(4);' : ''} }\n`);
         try {
-            const run = spawnSync(process.execPath, ['k6/reporting/run.mjs', ...(mode === 'pass' ? ['--dashboard'] : []), name], {
+            const env = { ...process.env, K6_WEB_DASHBOARD_OPEN: 'false', K6_WEB_DASHBOARD_PORT: '-1', K6_WEB_DASHBOARD_PERIOD: '1s' };
+            // Exercise automatic load mode, explicit flag, and opting out on load failures.
+            delete env.K6_WEB_DASHBOARD;
+            delete env.K6_WEB_DASHBOARD_EXPORT;
+            if (!dashboard) env.K6_WEB_DASHBOARD = 'false';
+            const run = spawnSync(process.execPath, ['k6/reporting/run.mjs', ...(mode === 'dashboard-flag' ? ['--dashboard'] : []), name], {
                 encoding: 'utf8',
-                env: { ...process.env, K6_WEB_DASHBOARD_OPEN: 'false', K6_WEB_DASHBOARD_PERIOD: '1s' },
+                env,
+                timeout: 30000,
             });
-            assert.equal(run.status, mode === 'pass' ? 0 : mode === 'fail' ? 99 : 107, run.stdout + run.stderr);
+            assert.equal(run.status, passing ? 0 : mode === 'fail' ? 99 : 107, run.stdout + run.stderr);
             const dirs = (await readdir('k6/results')).filter(d => d.includes(name));
             assert.equal(dirs.length, 1);
             const dir = `k6/results/${dirs[0]}`;
@@ -59,10 +67,12 @@ test('real k6 report pipeline produces PDF/HTML and preserves failed exit codes 
             assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
             assert.match(pdf.toString(), /%%EOF/);
             const html = await readFile(`${dir}/report.html`, 'utf8');
-            assert.match(html, new RegExp(`<strong>${mode === 'pass' ? 'PASS' : mode === 'fail' ? 'FAIL' : 'INCOMPLETE'}</strong>`));
-            if (mode === 'pass') {
+            assert.match(html, new RegExp(`<strong>${passing ? 'PASS' : mode === 'fail' ? 'FAIL' : 'INCOMPLETE'}</strong>`));
+            if (dashboard) {
                 const dashboardHtml = await readFile(`${dir}/k6-dashboard.html`, 'utf8').catch(() => '');
                 assert.match(dashboardHtml, /k6/i, run.stdout + run.stderr);
+            } else {
+                assert.equal((await readdir(dir)).includes('k6-dashboard.html'), false);
             }
             if (mode !== 'setup-error') assert.match(html, /SYNTHETIC report plumbing only/);
         } finally { await rm(scenario, { force: true }); }

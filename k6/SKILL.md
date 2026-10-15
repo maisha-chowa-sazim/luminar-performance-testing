@@ -95,7 +95,7 @@ npm run test:load:5 -- --dashboard
 
 Plain `k6 run` does not load dotenv files automatically or invoke the PDF renderer. The runner produces a unique ignored directory under `k6/results/` containing `report.pdf`, `report.html`, `metadata.json`, and `summary.json` when k6 reaches summary generation. Dashboard mode additionally exports `k6-dashboard.html` by default. Retain the runner's exit status and exact output directory.
 
-Dashboard defaults to `http://localhost:5665` with 10-second updates. Close the dashboard tab after execution so k6 can finish reporting. For export without a live server, use `K6_WEB_DASHBOARD_PORT=-1`. Inspect existing dashboard options before overriding port, interval, or export path.
+The runner enables the dashboard automatically for `load-` scenarios, including `npm run test:load:arrival`. Set `K6_WEB_DASHBOARD=false` to opt out, or use `--dashboard` to enable it explicitly for any scenario. Dashboard defaults to `http://localhost:5665` with 10-second updates. Close the dashboard tab after execution so k6 can finish reporting. For export without a live server, use `K6_WEB_DASHBOARD_PORT=-1`. Inspect existing dashboard options before overriding port, interval, or export path.
 
 Threshold failures are valid measured failures, not a reason to discard reports or relax targets. Initialization/setup failures and interruptions must be identified as incomplete. The runner can generate an incomplete report when it exits normally without a valid summary; hard termination or missing dependencies can prevent report generation. Never label a run successful merely because a PDF exists.
 

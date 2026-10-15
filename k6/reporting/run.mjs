@@ -19,7 +19,10 @@ if (!/^[a-z0-9-]+(?:\.js)?$/.test(input) || scenarioArgs.length > 1 || args.leng
 }
 const scenario = input.replace(/\.js$/, '');
 if (!existsSync(`k6/scenarios/${scenario}.js`)) throw new Error(`Unknown scenario: ${scenario}`);
-const dashboardEnabled = dashboardMode || process.env.K6_WEB_DASHBOARD === 'true';
+// Load runs visualize results by default; explicit environment settings take precedence.
+const dashboardEnabled = dashboardMode || (process.env.K6_WEB_DASHBOARD === undefined
+    ? scenario.startsWith('load-')
+    : process.env.K6_WEB_DASHBOARD === 'true');
 const directory = path.join(root, 'k6/results', `${new Date().toISOString().replace(/[:.]/g, '-')}-${scenario}-${randomUUID().slice(0,8)}`);
 await mkdir(directory, { recursive: true });
 const temporary = await mkdtemp(path.join(root, 'k6/scenarios/.report-'));
