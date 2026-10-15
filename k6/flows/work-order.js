@@ -45,7 +45,7 @@ export function createWorkOrder(token, purchaseOrderId = '', styleId = '') {
     });
 
     if (!reservationOk) {
-        console.error(`Work-order number reservation failed: ${reservationResp.status} ${reservationResp.body}`);
+        console.error(`Work-order number reservation failed: ${reservationResp.status} [response redacted]`);
         return null;
     }
 
@@ -78,7 +78,7 @@ export function createWorkOrder(token, purchaseOrderId = '', styleId = '') {
     });
 
     if (!ok) {
-        console.error(`Work-order create failed: ${resp.status} ${resp.body}`);
+        console.error(`Work-order create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;
@@ -98,7 +98,7 @@ export function getCreatedWorkOrderId(resp) {
     });
 
     if (!ok) {
-        console.error(`Could not read created work-order ID: ${resp?.status} ${resp?.body}`);
+        console.error(`Could not read created work-order ID: ${resp?.status} [response redacted]`);
     }
 
     return workOrderId;
@@ -118,7 +118,7 @@ export function getCreatedWorkOrderVariantId(resp) {
     });
 
     if (!ok) {
-        console.error(`Could not read created work-order item variant ID: ${resp?.status} ${resp?.body}`);
+        console.error(`Could not read created work-order item variant ID: ${resp?.status} [response redacted]`);
     }
 
     return variantId;
@@ -155,7 +155,7 @@ export function sendWorkOrderToSupplier(token, workOrderId) {
     });
 
     if (!ok) {
-        console.error(`Work-order status update failed: ${resp.status} ${resp.body}`);
+        console.error(`Work-order status update failed: ${resp.status} [response redacted]`);
     }
 
     return resp;

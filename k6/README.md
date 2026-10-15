@@ -1,15 +1,17 @@
 # Luminar k6 project structure
 
+For independent concurrent Merchandiser and Inventory users (Approach B), use `npm run test:roles:smoke`, then the separate `test:roles:10`, `test:roles:20`, and `test:roles:50` commands as appropriate. See [role-based execution, handoff safety, configuration, and current verification blockers](../docs/role-based-load-testing.md). These scenarios reuse root `.env` account pools and retain functional full-journey and arrival-rate scenarios.
+
 This project follows the flow-based pattern used in the example k6 project:
 
 - `config/` contains environment and scenario profiles
 - `helpers/` contains shared auth and HTTP utilities
 - `flows/` contains business-flow actions such as login, style, tech pack, BOM, costing, sample, PO, and work order
-- `scenarios/` contains smoke, load, spike, breakpoint, and full-journey scripts
+- `scenarios/` contains feature smoke tests, the functional full journey, account verification, role-based load, and arrival-rate entrypoints
 
 ## Functional scenarios
 
-Each functional scenario requires every k6 check to pass. The BOM, costing, sample, and tech-pack scenarios create a fresh style first. The receive-item scenario logs in as merchandiser, senior merchandiser, then inventory.
+Each functional scenario requires every k6 check to pass. The BOM, costing, sample, and tech-pack scenarios create a fresh style first. The full journey includes approvals and item receipt.
 
 Run the scenarios independently:
 ```bash
@@ -18,9 +20,7 @@ k6 run k6/scenarios/sample-smoke.js
 k6 run k6/scenarios/bom-smoke.js
 k6 run k6/scenarios/pre-costing-smoke.js
 k6 run k6/scenarios/tech-pack-smoke.js
-k6 run k6/scenarios/style-to-pre-costing-flow.js
 k6 run k6/scenarios/full-journey.js
-k6 run k6/scenarios/work-order-and-receive-item-flow.js
 ```
 
 ## Environment variables
@@ -38,11 +38,11 @@ LUMINAR_FACTORY_ID=<environment-specific-factory-id>
 LUMINAR_ORGANIZATION_ID=<environment-specific-organization-id>
 LUMINAR_BUYER_ID=<environment-specific-buyer-id>
 LUMINAR_PAYMENT_PROVIDER_ID=<environment-specific-payment-provider-id>
-LUMINAR_SHIPMENT_DATE=<yyyy-mm-dd>
 LUMINAR_STYLE_ID=<existing-style-uuid>
 
 LOGIN_DELAY_SECONDS=1
 LOGIN_MAX_RETRIES=2
+LOGIN_RETRY_BASE_SECONDS=30
 LOGIN_MAX_RETRY_WAIT_SECONDS=120
 LOGIN_SETUP_TIMEOUT=30m
 LOGIN_MAX_DURATION=30m
@@ -60,25 +60,26 @@ k6 run k6/scenarios/sample-smoke.js
 
 ## Seed data and cleanup
 
+Purchase-order shipment dates come from `k6/data/purchase.json`. Each shipment defines `shipmentDate: { "daysFromToday": 30, "utcOffsetMinutes": 360 }`, which resolves to the current calendar date in Asia/Dhaka (UTC+06:00) plus 30 days when building the payload. `LUMINAR_SHIPMENT_DATE` is not required or used.
+
 Run these scenarios only against a disposable QA environment. Keep `BASE_URL`, factory, organization, buyer, and role accounts aligned to the same tenant. Before running, verify that the buyer from `LUMINAR_BUYER_ID`, garment-size template in `style.json`, measurable items in `bom.json`, and measurable items, suppliers, purchase-order references, and variants in `work-order.json` exist and are active in that tenant. The tech-pack metadata filenames must match files under `data/techpack/`.
 
 These scenarios create persistent records and upload objects. The API currently exposes style soft-delete and tech-pack deletion, but no complete delete workflow for BOMs, samples, costings, purchase orders, work orders, or GRNs. For a full reset, restore the disposable QA database to its approved seeded snapshot and clear the test tech-pack object prefix using the environment's object-storage cleanup/lifecycle process. Do not treat reruns as cleanup; without that reset, duplicate records and accumulated files are expected.
 
 ## Performance profiles
 
-Each profile runs the full style → sample → tech pack/upload → BOM → costing → purchase order → approvals → work order → item receipt journey. VUs represent concurrent journeys using shared role accounts, not distinct users. Set `THINK_TIME_SECONDS` to configure the pause after each attempt.
+`load-roles.js` is the single entrypoint for independent concurrent Merchandiser and Inventory load. The former per-user load files and two partial linked-journey scripts were removed. Feature smoke tests and `full-journey.js` remain for functional diagnosis.
 
-The existing VU profiles remain available alongside the arrival-rate scenario. Durations **include** ramp-up and ramp-down. Graceful completion can add up to two minutes; it may also allow retiring VUs to finish during ramp-down.
+| Command | Merchandiser VUs | Inventory VUs | Combined peak |
+| --- | ---: | ---: | ---: |
+| `npm run test:load:5` | 4 | 1 | 5 |
+| `npm run test:load:10` | 8 | 2 | 10 |
+| `npm run test:load:20` | 16 | 4 | 20 |
+| `npm run test:load:50` | 40 | 10 | 50 |
 
-| Command | VUs | Ramp up | Steady load | Ramp down | Scheduled total |
-| --- | ---: | --- | --- | --- | --- |
-| `npm run test:load:5` | 5 | 1 min | 3 min | 1 min | 5 min |
-| `npm run test:load:10` | 10 | 2 min | 14 min | 2 min | 18 min |
-| `npm run test:load:20` | 20 | 2 min | 6 min | 2 min | 10 min |
+These commands now use the independent-role model, rather than one complete journey per VU. They default to 2m ramp-up, 15m steady producer load, and 2m ramp-down. Inventory continues through producer completion grace and queue draining. Targets are provisional: application HTTP p95 <2000ms, p99 <5000ms, failures <1%, and end-to-end completion >=99%, with zero integrity/quantity/duplicate-success violations. Configuration is in `config/role-load.mjs`; see the [role-based run guide](../docs/role-based-load-testing.md) for credentials, durations, handoff, smoke settings, and prerequisites. The unsupported 100-VU command was removed to respect the 50-VU role cap.
 
-Configuration lives in `config/performance.js`; each scenario has its own entrypoint in `scenarios/load-<users>-users.js`. The default acceptance criteria are HTTP failures <1%, HTTP p95 <3000ms, p99 <5000ms, checks >99%, journey success >99%, and at least one started and successfully completed journey. These are **provisional SLOs**, not agreed business requirements. Stress profiles keep the same criteria to expose degradation.
-
-Performance setup requires `BASE_URL`, `LUMINAR_FACTORY_ID`, `LUMINAR_ORGANIZATION_ID`, `LUMINAR_BUYER_ID`, `LUMINAR_PAYMENT_PROVIDER_ID`, `LUMINAR_SHIPMENT_DATE`, all 42 credential pairs mapped in `data/users.json`, and the login/think-time settings shown above. Supply URL, tenant IDs, buyer, provider, and date for the target environment; no built-in fallback is used for those values. Other reference-data IDs remain in JSON fixtures and must be valid for that environment. Setup authenticates each account sequentially and returns sessions to the VUs; business iterations reuse those sessions. No automatic re-login occurs if a session expires. Executive and senior-merchandiser sessions are shared across journeys; merchandiser and inventory sessions are assigned by VU ID. All 42 accounts are authenticated even when fewer VUs are allocated.
+The distinct `load-arrival-rate.js` scenario retains the legacy full-journey session pool and acceptance criteria in `config/performance.js`. It authenticates all 42 accounts mapped in `data/users.json`, requires the login/environment settings above, and reuses setup sessions without automatic refresh. It schedules journey starts rather than independent role users; see the arrival-rate section below.
 
 ## Automatic stakeholder PDF reports
 
@@ -120,21 +121,21 @@ npm run test:dashboard -- full-journey
 node --env-file=.env.dev k6/reporting/run.mjs --dashboard load-arrival-rate
 ```
 
-Replace `load-5-users` with any scenario name under `scenarios/`. Open `http://localhost:5665` while the test runs to see live metrics. Updates default to every 10 seconds. Close its browser tab when finished so k6 can exit and the regular PDF/HTML reports can complete. Exported graphs require a test duration greater than three times the update period (over 30 seconds by default).
+Use `load-roles` for independent roles or select another existing scenario under `scenarios/`. Open `http://localhost:5665` while the test runs to see live metrics. Updates default to every 10 seconds. Close its browser tab when finished so k6 can exit and the regular PDF/HTML reports can complete. Exported graphs require a test duration greater than three times the update period (over 30 seconds by default).
 
 The runner respects standard dashboard environment options, supplied in `.env` or your shell:
 
 ```bash
 # Change the port and update interval; open the URL manually:
 K6_WEB_DASHBOARD_PORT=5666 K6_WEB_DASHBOARD_PERIOD=5s K6_WEB_DASHBOARD_OPEN=false \
-  npm run test:dashboard -- load-5-users
+  npm run test:dashboard -- load-roles
 # Export only, suitable for CI with no live HTTP server:
 K6_WEB_DASHBOARD_PORT=-1 npm run test:load:5
 # Disable dashboard visualization and export while retaining PDF/HTML reports:
 K6_WEB_DASHBOARD=false npm run test:load:5
-# Native k6 usage (load application environment variables first):
+# Native arrival-rate usage (load environment and JOURNEY_* settings first):
 K6_WEB_DASHBOARD=true K6_WEB_DASHBOARD_OPEN=true \
-  k6 run k6/scenarios/load-5-users.js
+  k6 run k6/scenarios/load-arrival-rate.js
 ```
 
 `K6_WEB_DASHBOARD_EXPORT` overrides the exported HTML path. Use a different port for concurrent live runs. The dashboard URL is available only while k6 is running; open the saved `k6-dashboard.html` afterward for the built-in report.
@@ -163,7 +164,7 @@ Verify all 42 accounts without creating business records:
 node --env-file=.env.prod k6/reporting/run.mjs login-all-users
 ```
 
-Verification uses one VU and 42 sequential iterations. Configure `LOGIN_DELAY_SECONDS`, `LOGIN_MAX_RETRIES`, `LOGIN_MAX_RETRY_WAIT_SECONDS`, and `LOGIN_MAX_DURATION` explicitly in the selected environment file. The same login pacing and retry settings apply to load-test authentication; configure `LOGIN_SETUP_TIMEOUT` for load-test setup. This verifies accounts sequentially; it does not model concurrent real-world user arrivals. HTTP 429 responses respect `Retry-After` seconds or HTTP dates, with exponential delay when the header is absent. If the server asks for a longer wait, the account fails rather than retrying early. Retries are bounded; non-429 failures are not retried. Final authentication checks determine pass/fail, while every HTTP attempt, including 429s, remains in the metrics. Passwords and tokens are not logged.
+Verification uses one VU and 42 sequential iterations. Configure `LOGIN_DELAY_SECONDS`, `LOGIN_MAX_RETRIES`, `LOGIN_MAX_RETRY_WAIT_SECONDS`, and `LOGIN_MAX_DURATION` explicitly in the selected environment file. The same login pacing and retry settings apply to load-test authentication; configure `LOGIN_SETUP_TIMEOUT` for load-test setup. This verifies accounts sequentially; it does not model concurrent real-world user arrivals. HTTP 429 responses respect `Retry-After` seconds or HTTP dates, with an exponential cooldown starting at `LOGIN_RETRY_BASE_SECONDS` (30 seconds when unset) when the header is absent. If the server asks for a longer wait, the account fails rather than retrying early. Retries are bounded; non-429 failures are not retried. Final authentication checks determine pass/fail, while every HTTP attempt, including 429s, remains in the metrics. Passwords and tokens are not logged.
 
 Run business journeys at a fixed arrival rate:
 
@@ -174,4 +175,4 @@ JOURNEY_RATE=5 JOURNEY_TIME_UNIT=1m JOURNEY_DURATION=5m JOURNEY_VUS=20 \
 
 Set `JOURNEY_RATE`, `JOURNEY_TIME_UNIT`, `JOURNEY_DURATION`, and `JOURNEY_VUS` explicitly for each arrival-rate run. These are journey starts, not HTTP requests: a journey makes many requests. `JOURNEY_VUS` accepts 1–20 to avoid assigning concurrent VUs the same merchandiser/inventory account. VU assignment is stable, but the executor does not guarantee that every VU participates. There is no end-of-iteration think-time sleep in this scenario; the executor schedules arrivals. If all VUs are busy, dropped iterations fail the test rather than silently reducing the target. Choose the arrival rate from the intended workload and measured journey duration.
 
-Authentication runs before the timed workload and aborts setup on any failed account. Sessions remain in setup data for that run; the separate verification run does not persist or transfer tokens. Business HTTP latency/error thresholds are scoped to the business scenario, excluding authentication. Aggregate report totals still include setup requests. Business failures, including 429 or expired sessions, are reported without automatic backoff or re-login. Existing VU-based profiles also reuse setup sessions and retain their think-time delay.
+Authentication runs before the timed workload and aborts setup on any failed account. Sessions remain in setup data for that run; the separate verification run does not persist or transfer tokens. Business HTTP latency/error thresholds are scoped to the business scenario, excluding authentication. Aggregate report totals still include setup requests. Business failures, including 429 or expired sessions, are reported without automatic backoff or re-login. Independent role-based load uses its own account assignment, randomized think time, and session renewal as documented in the role-based guide.

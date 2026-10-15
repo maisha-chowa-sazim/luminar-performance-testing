@@ -73,13 +73,13 @@ export function createTechPack(token, styleId) {
     });
 
     if (!uploadUrlsOk) {
-        console.error(`Tech pack upload URL request failed: ${uploadUrlsResp.status} ${uploadUrlsResp.body}`);
+        console.error(`Tech pack upload URL request failed: ${uploadUrlsResp.status} [response redacted]`);
         return null;
     }
 
     const uploadInfos = uploadUrlsResp.json()?.data;
     if (!Array.isArray(uploadInfos) || uploadInfos.length !== techPackFiles.length) {
-        console.error(`Tech pack upload URL response count did not match requested files: ${uploadUrlsResp.body}`);
+        console.error(`Tech pack upload URL response count did not match requested files: [response redacted]`);
         return null;
     }
 
@@ -102,7 +102,7 @@ export function createTechPack(token, styleId) {
         });
 
         if (!uploadOk) {
-            console.error(`Tech pack file upload failed for ${file.fileName}: ${uploadResp.status} ${uploadResp.body}`);
+            console.error(`Tech pack file upload failed for ${file.fileName}: ${uploadResp.status} [response redacted]`);
             return null;
         }
 
@@ -137,7 +137,7 @@ export function createTechPack(token, styleId) {
     });
 
     if (!ok) {
-        console.error(`Tech pack create failed: ${resp.status} ${resp.body}`);
+        console.error(`Tech pack create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;

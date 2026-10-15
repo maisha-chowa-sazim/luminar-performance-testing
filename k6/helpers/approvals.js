@@ -40,7 +40,7 @@ export function approveResource({ token, resourceType, resourceId, feedback = 'A
     });
 
     if (!ok) {
-        console.error(`Approval failed for ${normalizedType} ${resourceId}: ${resp.status} ${resp.body}`);
+        console.error(`Approval failed for ${normalizedType} ${resourceId}: ${resp.status} [response redacted]`);
     }
 
     return resp;

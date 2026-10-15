@@ -41,7 +41,7 @@ export function createSample(token, styleId) {
     });
 
     if (!ok) {
-        console.error(`Sample create failed: ${resp.status} ${resp.body}`);
+        console.error(`Sample create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;

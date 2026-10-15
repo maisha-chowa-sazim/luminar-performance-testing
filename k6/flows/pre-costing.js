@@ -44,7 +44,7 @@ export function createPreCosting(token, styleId) {
     });
 
     if (!ok) {
-        console.error(`Pre-costing create failed: ${resp.status} ${resp.body}`);
+        console.error(`Pre-costing create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;
@@ -64,7 +64,7 @@ export function getCreatedPreCostingId(resp) {
     });
 
     if (!ok) {
-        console.error(`Could not read created pre-costing ID: ${resp?.status} ${resp?.body}`);
+        console.error(`Could not read created pre-costing ID: ${resp?.status} [response redacted]`);
     }
 
     return costingId;
@@ -92,7 +92,7 @@ export function submitPreCostingForApproval(token, styleId, costingId) {
     });
 
     if (!ok) {
-        console.error(`Pre-costing submission failed: ${resp.status} ${resp.body}`);
+        console.error(`Pre-costing submission failed: ${resp.status} [response redacted]`);
     }
 
     return resp;

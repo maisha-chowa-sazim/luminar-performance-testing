@@ -54,7 +54,7 @@ export function createBom(token, styleId, styleComboId) {
     });
 
     if (!ok) {
-        console.error(`BOM create failed: ${resp.status} ${resp.body}`);
+        console.error(`BOM create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;
@@ -74,7 +74,7 @@ export function getCreatedBomId(resp) {
     });
 
     if (!ok) {
-        console.error(`Could not read created BOM ID: ${resp?.status} ${resp?.body}`);
+        console.error(`Could not read created BOM ID: ${resp?.status} [response redacted]`);
     }
 
     return bomId;

@@ -55,7 +55,7 @@ export function createReceiveItem(token, workOrderId, poItemVariantId) {
     });
 
     if (!ok) {
-        console.error(`GRN create failed: ${resp.status} ${resp.body}`);
+        console.error(`GRN create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;

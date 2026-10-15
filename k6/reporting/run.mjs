@@ -5,6 +5,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { writeReports } from './report.mjs';
+import { startRoleCoordinator } from './role-coordinator.mjs';
+import { roleConfig } from '../config/role-load.mjs';
+import { selectRoleAccounts } from '../helpers/role-accounts.mjs';
+import { shipmentDate } from '../helpers/shipment-date.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 process.chdir(root);
@@ -19,6 +23,21 @@ if (!/^[a-z0-9-]+(?:\.js)?$/.test(input) || scenarioArgs.length > 1 || args.leng
 }
 const scenario = input.replace(/\.js$/, '');
 if (!existsSync(`k6/scenarios/${scenario}.js`)) throw new Error(`Unknown scenario: ${scenario}`);
+let roleConfiguration;
+if (scenario === 'load-roles') {
+    roleConfiguration = roleConfig(process.env);
+    const users = JSON.parse(await readFile(path.join(root, 'k6/data/users.json'), 'utf8'));
+    selectRoleAccounts(process.env, users, roleConfiguration);
+    for (const key of ['BASE_URL', 'LUMINAR_FACTORY_ID', 'LUMINAR_ORGANIZATION_ID', 'LUMINAR_BUYER_ID', 'LUMINAR_PAYMENT_PROVIDER_ID']) {
+        if (!process.env[key]?.trim()) throw new Error(`${key} is required for independent role testing`);
+    }
+    const purchase = JSON.parse(await readFile(path.join(root, 'k6/data/purchase.json'), 'utf8'));
+    for (const shipment of purchase.shipments) shipmentDate(shipment.shipmentDate);
+    if (['K6_VUS', 'K6_STAGES', 'K6_DURATION', 'K6_ITERATIONS', 'K6_SCENARIOS', 'K6_EXECUTION_SEGMENT', 'K6_EXECUTION_SEGMENT_SEQUENCE'].some(key => process.env[key])) {
+        throw new Error('Use ROLE_* workload settings; K6 workload overrides/segmentation are unsupported for the 50-VU role cap');
+    }
+    if (process.env.ROLE_RUN_ID && !/^[a-zA-Z0-9-]{1,40}$/.test(process.env.ROLE_RUN_ID)) throw new Error('ROLE_RUN_ID must contain 1–40 letters, digits, or hyphens');
+}
 // Load runs visualize results by default; explicit environment settings take precedence.
 const dashboardEnabled = dashboardMode || (process.env.K6_WEB_DASHBOARD === undefined
     ? scenario.startsWith('load-')
@@ -39,8 +58,23 @@ const metadata = {
 };
 const start = Date.now();
 let interrupted = false;
+let coordinator;
 try {
     const childEnvironment = { ...process.env, K6_SUMMARY_MODE: 'full' };
+    if (roleConfiguration) {
+        const runId = process.env.ROLE_RUN_ID || `lt-${randomUUID().slice(0, 12)}`;
+        coordinator = await startRoleCoordinator(directory, runId, roleConfiguration);
+        Object.assign(childEnvironment, {
+            ROLE_RUN_ID: runId, ROLE_COORDINATOR_URL: coordinator.url, ROLE_COORDINATOR_KEY: coordinator.secret,
+            LOGIN_DELAY_SECONDS: process.env.LOGIN_DELAY_SECONDS || '5',
+            LOGIN_RETRY_BASE_SECONDS: process.env.LOGIN_RETRY_BASE_SECONDS || '30',
+            LOGIN_MAX_RETRIES: process.env.LOGIN_MAX_RETRIES || '2',
+            LOGIN_MAX_RETRY_WAIT_SECONDS: process.env.LOGIN_MAX_RETRY_WAIT_SECONDS || '120',
+        });
+        metadata.roleConfiguration = roleConfiguration;
+        metadata.runId = runId;
+        console.log(`Independent roles: ${roleConfiguration.merchandiser} Merchandiser + ${roleConfiguration.inventory} Inventory VUs; run ${runId}`);
+    }
     if (dashboardEnabled) {
         childEnvironment.K6_WEB_DASHBOARD = 'true';
         childEnvironment.K6_WEB_DASHBOARD_OPEN ??= childEnvironment.K6_WEB_DASHBOARD_PORT === '-1' ? 'false' : 'true';
@@ -80,11 +114,22 @@ try {
     }
     const arrival = summary?.configuredOptions?.scenarios?.arrival_journey;
     if (arrival) metadata.profile = `${arrival.executor}: ${arrival.rate} journeys per ${arrival.timeUnit}, duration ${arrival.duration}, ${arrival.preAllocatedVUs} preallocated VUs; paced authentication in setup; sessions reused`;
+    if (coordinator) {
+        const ledger = coordinator.snapshot();
+        metadata.roleHandoff = ledger.stats;
+        metadata.roleFailures = [...ledger.workflows, ...ledger.orders].filter(value => value.state === 'failed')
+            .map(value => ({ id: value.id, step: value.step, kind: value.kind, httpStatus: value.httpStatus }));
+        metadata.profile = `Independent roles: ${roleConfiguration.merchandiser} Merchandiser + ${roleConfiguration.inventory} Inventory VUs; ramp ${roleConfiguration.rampUp}, steady ${roleConfiguration.steady}, ramp-down ${roleConfiguration.rampDown}; producer grace ${roleConfiguration.grace}; drain ${roleConfiguration.drain}`;
+    }
     await writeFile(path.join(directory, 'metadata.json'), JSON.stringify(metadata, null, 2));
     const status = await writeReports(directory, summary, metadata);
     console.log(`\n${status}: ${directory}/report.pdf\nHTML, summary JSON (when available), and metadata are in the same directory.`);
-    if (dashboardEnabled) console.log(`k6 dashboard report: ${childEnvironment.K6_WEB_DASHBOARD_EXPORT}`);
+    if (dashboardEnabled) {
+        if (existsSync(childEnvironment.K6_WEB_DASHBOARD_EXPORT)) console.log(`k6 dashboard report: ${childEnvironment.K6_WEB_DASHBOARD_EXPORT}`);
+        else console.log('k6 dashboard HTML was not generated; the run may have ended before enough dashboard data was collected.');
+    }
     process.exitCode = metadata.exitCode || (status === 'PASS' || status === 'UNASSESSED' ? 0 : 1);
 } finally {
+    if (coordinator) await coordinator.close();
     await rm(temporary, { recursive: true, force: true });
 }

@@ -13,7 +13,9 @@ export function reportModel(summary, metadata) {
         Object.entries(metric.thresholds || {}).map(([rule, result]) => ({ name, rule, ok: result.ok === true })));
     const requests = values('http_reqs').count || 0;
     const failed = thresholds.filter(t => !t.ok);
-    const status = !summary || !requests ? 'INCOMPLETE' : metadata.exitCode !== 0 || failed.length ? 'FAIL' : thresholds.length ? 'PASS' : 'UNASSESSED';
+    const roleIncomplete = metadata.roleConfiguration && (!metadata.roleHandoff?.attempted || !metrics.e2e_success);
+    const roleFailed = metadata.roleConfiguration && (metadata.roleHandoff?.received / metadata.roleHandoff?.attempted < metadata.roleConfiguration.completion);
+    const status = !summary || !requests || roleIncomplete ? 'INCOMPLETE' : metadata.exitCode !== 0 || failed.length || roleFailed ? 'FAIL' : thresholds.length ? 'PASS' : 'UNASSESSED';
     const checks = [];
     function walk(group) {
         for (const c of group?.checks || []) checks.push(`${c.name}: ${c.passes} passed / ${c.fails} failed`);
@@ -52,7 +54,7 @@ export function reportModel(summary, metadata) {
             const tag = key.slice('http_reqs'.length);
             const count = values(key).count || 0;
             const timing = values(`http_req_duration${tag}`);
-            return `${tag.slice(6, -1)}: ${count} requests; p95 ${count ? number(timing['p(95)']) : 'N/A'} ms; errors ${count ? percent(values(`http_req_failed${tag}`).rate) : 'N/A'}`;
+            return `${tag.slice(6, -1)}: ${count} requests; ${number(values(key).rate)} requests/s; average ${count ? number(timing.avg) : 'N/A'}, p90 ${count ? number(timing['p(90)']) : 'N/A'}, p95 ${count ? number(timing['p(95)']) : 'N/A'}, p99 ${count ? number(timing['p(99)']) : 'N/A'} ms; errors ${count ? percent(values(`http_req_failed${tag}`).rate) : 'N/A'}`;
         })],
         ['Functional checks', checks.length ? checks : ['No check data available.']],
         ['Interpretation and next steps', [
@@ -64,6 +66,26 @@ export function reportModel(summary, metadata) {
             'No automatic breaking-point or recovery claim is made from an aggregate report. Use time-series telemetry for saturation, ramp-down recovery and endpoint diagnosis.',
         ]],
     ];
+    if (metadata.roleConfiguration) {
+        const config = metadata.roleConfiguration, handoff = metadata.roleHandoff || {};
+        sections.splice(3, 0, ['Independent roles and handoff', [
+            `Run identifier: ${metadata.runId}; ${config.merchandiser} Merchandiser + ${config.inventory} Inventory VUs (cap 50).`,
+            `Workflows attempted: ${handoff.attempted ?? 'N/A'}; Merchandiser completed: ${values('merchandiser_completed').count ?? 0}; failed: ${values('merchandiser_failed').count ?? 0}; success: ${percent(values('merchandiser_success').rate)}.`,
+            `Work orders created: ${handoff.created ?? 'N/A'}; ready: ${handoff.ready ?? 'N/A'}; currently claimed: ${handoff.claimed ?? 'N/A'}; received and verified: ${handoff.received ?? 'N/A'}; failed: ${handoff.failed ?? 'N/A'}; unreceived backlog (includes failed/claimed): ${handoff.pending ?? 'N/A'}.`,
+            `End-to-end completion against ALL attempted workflows: ${handoff.attempted ? percent(handoff.received / handoff.attempted) : 'N/A'}; Inventory success: ${percent(values('inventory_success').rate)}; failed receiving attempts: ${values('inventory_failed').count ?? 0}.`,
+            `End-to-end elapsed p95: ${number(values('e2e_elapsed_duration')['p(95)'])} ms; work-order creation to verified stock receipt p95: ${number(values('work_order_to_receipt_duration')['p(95)'])} ms. Both include human delays and queue waiting. HTTP latency measures request time separately.`,
+            `Quantity violations: ${values('incorrect_inventory_quantities').count ?? 'N/A'}; data-integrity violations: ${values('data_integrity_violations').count ?? 'N/A'}; duplicate successful receipts: ${values('duplicate_successful_receipts').count ?? 'N/A'}; coordinator duplicate acknowledgements: ${handoff.duplicateAttempts ?? 'N/A'}.`,
+            `Application HTTP latency p95: ${number(values('http_req_duration{traffic:application}')['p(95)'])} ms; p99: ${number(values('http_req_duration{traffic:application}')['p(99)'])} ms; errors: ${percent(values('http_req_failed{traffic:application}').rate)}. Aggregate HTTP totals also include local coordination and setup.`,
+            'handoff-ledger.json retains created, ready, claimed, failed, and received orders and workflow failures. Claims are never automatically reassigned. Failed/ambiguous writes require manual reconciliation before any retry.',
+            'QC uses a test-data assumption that all received units pass. Stock entries and GRNs are read back and quantities checked. Shared executive/senior accounts perform prerequisite approvals inside Merchandiser VUs.',
+            ...(metadata.roleFailures?.length ? metadata.roleFailures.map(value => `Failed record ${value.id}: step ${value.step}; category ${value.kind || 'unknown'}; HTTP ${value.httpStatus ?? 'not available'}.`) : ['No failed records recorded in the handoff ledger.']),
+        ]]);
+        const notes = sections.find(([heading]) => heading === 'Interpretation and next steps')[1];
+        notes.splice(0, 3,
+            `Provisional application API targets: p95 <${config.apiP95}ms, p99 <${config.apiP99}ms, failures <${percent(config.httpFailure)}; end-to-end completion >=${percent(config.completion)}.`,
+            'Each business VU has a distinct account within its role and reuses its session. The two roles execute independently. Coordinator traffic is excluded from application HTTP thresholds.',
+            'Role metrics include ramps and drain; they do not establish steady-state-only performance. Empty Inventory polls indicate lack of available work, not backend receipt failures. Failed API checks/steps, authentication failures, and data-integrity counters must be investigated separately.');
+    }
     return { status, sections };
 }
 

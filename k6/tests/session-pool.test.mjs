@@ -4,13 +4,14 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
 
-function harness(responses = []) {
+function harness(responses = [], settings = {}) {
     const users = JSON.parse(fs.readFileSync('k6/data/users.json'));
     const env = {
         BASE_URL: 'https://example.test',
         LOGIN_DELAY_SECONDS: '1',
         LOGIN_MAX_RETRIES: '2',
         LOGIN_MAX_RETRY_WAIT_SECONDS: '120',
+        ...settings,
     };
     for (const config of Object.values(users)) for (const account of config.accounts || [config]) {
         env[account.emailEnvKey] = account.emailEnvKey;
@@ -67,6 +68,20 @@ test('missing credentials fail before HTTP and non-retryable failures stop setup
     const failed = harness([{ status: 401, headers: {}, json: () => ({}) }]);
     assert.throws(() => failed.ctx.setupSessions(), /business load cancelled/);
     assert.equal(failed.requests.length, 1);
+});
+
+test('429 without Retry-After waits for a bounded throttle cooldown, not the inter-account delay', () => {
+    const limited = { status: 429, headers: {}, json: () => ({}) };
+    const h = harness([limited, limited]);
+    assert.ok(h.ctx.authenticateAccount(vm.runInContext('accounts[0]', h.ctx)));
+    assert.deepEqual(h.sleeps, [30, 60, 1]);
+    assert.equal(h.requests.length, 3);
+    const explicit = harness([limited], { LOGIN_DELAY_SECONDS: '5', LOGIN_RETRY_BASE_SECONDS: '45' });
+    explicit.ctx.authenticateAccount(vm.runInContext('accounts[0]', explicit.ctx));
+    assert.deepEqual(explicit.sleeps, [45, 5]);
+    const excessive = harness([limited], { LOGIN_RETRY_BASE_SECONDS: '121' });
+    assert.equal(excessive.ctx.authenticateAccount(vm.runInContext('accounts[0]', excessive.ctx)), null);
+    assert.equal(excessive.requests.length, 1);
 });
 
 test('k6 loads arrival rate and sequential verification options without network requests', () => {

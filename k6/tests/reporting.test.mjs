@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFile, writeFile, rm, readdir } from 'node:fs/promises';
 import { reportModel } from '../reporting/report.mjs';
+import { seconds } from '../config/role-load.mjs';
 
 const sample = ok => ({ metrics: {
     http_reqs: { values: { count: 10, rate: 2 } },
@@ -15,8 +16,8 @@ test('assessment never labels missing data or failed execution as passing', () =
     assert.equal(reportModel(null, { exitCode: 0 }).status, 'INCOMPLETE');
     assert.equal(reportModel({ metrics: { http_reqs: { values: { count: 2 } } } }, { exitCode: 0 }).status, 'UNASSESSED');
 });
-test('all profiles load in k6 with expected stages and completion gates', () => {
-    const totals = { 5: 300, 10: 1080, 20: 600 };
+test('role load levels parse with expected allocations, steady phases, and completion gates', () => {
+    const totals = { 5: [4, 1], 10: [8, 2], 20: [16, 4], 50: [40, 10] };
     const env = {
         ...process.env,
         LOGIN_SETUP_TIMEOUT: '30m',
@@ -25,19 +26,20 @@ test('all profiles load in k6 with expected stages and completion gates', () => 
         LOGIN_MAX_RETRY_WAIT_SECONDS: '120',
         THINK_TIME_SECONDS: '3',
     };
-    for (const [users, seconds] of Object.entries(totals)) {
-        const result = spawnSync('k6', ['inspect', '--include-system-env-vars', `k6/scenarios/load-${users}-users.js`], {
+    for (const [users, allocation] of Object.entries(totals)) {
+        const result = spawnSync('k6', ['inspect', '--include-system-env-vars', 'k6/scenarios/load-roles.js'], {
             encoding: 'utf8',
-            env,
+            env: { ...env, ROLE_TOTAL_VUS: users, ROLE_RAMP_UP: '2m', ROLE_STEADY: '15m', ROLE_RAMP_DOWN: '2m' },
         });
         assert.equal(result.status, 0, result.stderr);
         const options = JSON.parse(result.stdout);
-        const scenario = options.scenarios.full_journey;
+        const scenario = options.scenarios.merchandiser;
         assert.equal(scenario.executor, 'ramping-vus');
         assert.equal(scenario.startVUs, 0);
-        assert.deepEqual(scenario.stages.map(s => s.target), [+users, +users, 0]);
-        assert.equal(scenario.stages.reduce((sum, s) => sum + Number(s.duration.match(/\d+/)[0]) * 60, 0), seconds);
-        assert.deepEqual(options.thresholds.journey_success, ['rate>0.99']);
+        assert.deepEqual(scenario.stages.map(s => s.target), [allocation[0], allocation[0], 0]);
+        assert.equal(options.scenarios.inventory.stages[1].target, allocation[1]);
+        assert.equal(seconds(scenario.stages[1].duration), 900);
+        assert.deepEqual(options.thresholds.e2e_success, ['rate>=0.99']);
     }
 });
 test('real k6 report pipeline produces PDF/HTML and preserves failed exit codes without network requests', async () => {

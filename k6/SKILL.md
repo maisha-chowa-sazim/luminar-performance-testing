@@ -15,7 +15,7 @@ Read the relevant current implementation before selecting or changing a test:
 | --- | --- |
 | `k6/README.md` and `package.json` | Run commands, prerequisites, environment loading, and report behavior |
 | `k6/scenarios/` | Available executable scenarios and functional coverage |
-| `k6/config/performance.js` | VU profiles, provisional thresholds, and endpoint metric names |
+| `k6/config/role-load.mjs` and `k6/config/performance.js` | Role workloads and legacy arrival-rate options, thresholds, endpoint metrics |
 | `k6/config/functional-thresholds.js` | Functional acceptance criteria |
 | `k6/flows/` | Reusable business actions and performance journey instrumentation |
 | `k6/helpers/` | Authentication, session pools, tenant headers, approvals, and unique identifiers |
@@ -38,11 +38,13 @@ The business scenarios create persistent styles, samples, BOMs, costings, orders
 - Use Node.js 22+ and the project's compatible k6 binary; the README records validation with k6 2.2.0. Install pinned reporting dependencies with `npm ci` when needed.
 - The Node runner loads root `.env`; values already in the process environment take precedence. Select another existing dotenv file with `node --env-file=.env.qa k6/reporting/run.mjs <scenario>`. An `ENV=qa` argument does not select a Luminar configuration. `k6/config/env.js` is deprecated.
 - Require an explicit `BASE_URL` for the intended environment. Check `LUMINAR_FACTORY_ID`, `LUMINAR_BUYER_ID`, role credentials, and any required `LUMINAR_ORGANIZATION_ID` against the same tenant. Do not rely on helper fallback IDs as evidence that the environment is ready.
-- Read credential variable names from `k6/data/users.json`. Performance setup requires all 42 credential pairs: 20 merchandisers, 20 inventory accounts, one executive, and one senior merchandiser. Functional scenarios use the roles selected by their implementation and `helpers/auth.js`.
-- Check buyer, garment-size template, measurable items, suppliers, variants, and purchase references in the relevant fixtures. Preserve the existing `data/recieve-item.json` spelling. Verify tech-pack filenames against `data/techpack/` and maintain valid business dates, including any `LUMINAR_SHIPMENT_DATE` override.
+- Read credential variable names from `k6/data/users.json`. Legacy arrival-rate setup requires all 42 credential pairs: 20 merchandisers, 20 inventory accounts, one executive, and one senior merchandiser. Functional scenarios use the roles selected by their implementation and `helpers/auth.js`.
+- Check buyer, garment-size template, measurable items, suppliers, variants, and purchase references in the relevant fixtures. Preserve the existing `data/recieve-item.json` spelling. Verify tech-pack filenames against `data/techpack/` and maintain valid business dates. Shipment dates resolve from the relative rule in `data/purchase.json` to today plus 30 days in its configured timezone; do not require `LUMINAR_SHIPMENT_DATE`.
 - Keep credentials, tokens, cookies, signed upload URLs, and raw response bodies out of shared reports and chat. Some existing failure logs contain response bodies; inspect and sanitize diagnostics before sharing them.
 
 ## Select a scenario
+
+For independent Merchandiser/Inventory concurrency, read [the role-based run guide](../docs/role-based-load-testing.md) and use `load-roles` through the Node runner (`npm run test:roles`). It uses the declared `*_ACCOUNT_COUNT`/`*_ACCOUNT_<n>_*` pools, two scenarios capped at 50 total VUs, randomized think time, durable atomic handoff, and stock read-back verification. The `test:roles:smoke`, `test:roles:10`, `test:roles:20`, and `test:roles:50` scripts select the documented workload. Legacy session guidance below applies to the arrival-rate scenario, not independent-role load. Verify the guide's fixture and costing-contract prerequisites before live execution.
 
 Use only entrypoints that exist in `k6/scenarios/`.
 
@@ -51,14 +53,14 @@ Use only entrypoints that exist in `k6/scenarios/`.
 | Check all performance accounts | `login-all-users` | One VU, 42 sequential authentication iterations; no business records |
 | Basic business smoke | `npm run test:smoke` | One VU/iteration; style and purchase-order flow with approval |
 | Validate one feature | `style-smoke`, `sample-smoke`, `tech-pack-smoke`, `bom-smoke`, `pre-costing-smoke` | Read the selected scenario for role and resource dependencies |
-| Validate linked flows | `style-to-pre-costing-flow`, `work-order-and-receive-item-flow` | Functional coverage for the selected chain |
 | Complete business journey | `full-journey` | One VU/iteration through item receipt |
-| Light load | `npm run test:load:5` | 5 VUs: 1m ramp up, 3m hold, 1m ramp down |
-| Target profile | `npm run test:load:10` | 10 VUs: 2m ramp up, 14m hold, 2m ramp down |
-| Higher load | `npm run test:load:20` | 20 VUs: 2m ramp up, 6m hold, 2m ramp down |
+| Light load | `npm run test:load:5` | 4 Merchandiser + 1 Inventory VU |
+| Target profile | `npm run test:load:10` | 8 Merchandiser + 2 Inventory VUs |
+| Higher load | `npm run test:load:20` | 16 Merchandiser + 4 Inventory VUs |
+| Maximum role load | `npm run test:load:50` | 40 Merchandiser + 10 Inventory VUs |
 | Fixed journey arrival rate | `load-arrival-rate` | Default 5 starts/minute for 5m, 20 preallocated VUs |
 
-The 50/100-VU npm scripts and profile definitions currently remain, but their scenario files are absent. Do not advertise them as runnable or recreate them unless requested. Stress, soak, and spike tests require explicit implementation and workload selection; they are not existing entrypoints.
+All per-user load commands use `load-roles`; separate per-user load files and partial linked-flow scripts were removed. Role load defaults to a 15-minute steady phase, and total role concurrency is capped at 50. There is no 100-VU command. Stress, soak, and spike tests require explicit implementation and workload selection; they are not existing entrypoints.
 
 The full journey creates style → sample → tech pack/uploads → BOM → costing/submission → purchase order → work order, then performs executive BOM/costing/purchase approvals, senior-merchandiser work-order approval and supplier status update, and inventory receipt. Preserve resource IDs and role transitions from the implementation.
 
@@ -66,13 +68,13 @@ For load execution, validate the functional journey before increasing concurrenc
 
 ## Authentication and pacing
 
-Performance scenarios authenticate all 42 accounts sequentially in `setup()`, abort on any final authentication failure, and reuse those sessions for business iterations. The separate `login-all-users` run does not persist sessions for later runs.
+The arrival-rate scenario authenticates all 42 accounts sequentially in `setup()`, abort on any final authentication failure, and reuse those sessions for business iterations. The separate `login-all-users` run does not persist sessions for later runs.
 
 `helpers/session-pool.js` assigns merchandiser and inventory sessions by VU ID; executive and senior-merchandiser sessions are shared. VUs represent concurrent journeys, not 42 independently active users. Arrival-rate `JOURNEY_VUS` is limited to 1–20 to avoid concurrent account reuse within each pooled role.
 
-Authentication defaults: `LOGIN_DELAY_SECONDS=1`, `LOGIN_MAX_RETRIES=2`, and `LOGIN_MAX_RETRY_WAIT_SECONDS=120`. Only HTTP 429 is retried, respecting `Retry-After` seconds or dates; an excessive wait fails the account instead of retrying early. `LOGIN_MAX_DURATION` and `LOGIN_SETUP_TIMEOUT` default to `30m`. Do not add unbounded retries, automatic business retries, or session refresh to hide failures.
+Role-runner authentication defaults: `LOGIN_DELAY_SECONDS=5`, `LOGIN_MAX_RETRIES=2`, `LOGIN_RETRY_BASE_SECONDS=30`, and `LOGIN_MAX_RETRY_WAIT_SECONDS=120`. Legacy scenarios require their login pacing/retry settings explicitly. Only HTTP 429 is retried, respecting `Retry-After` seconds or dates; an excessive wait fails the account instead of retrying early. `LOGIN_MAX_DURATION` and `LOGIN_SETUP_TIMEOUT` default to `30m`. Do not add unbounded retries, automatic business retries, or session refresh to hide failures.
 
-VU profiles sleep after every attempt, including failures, using `THINK_TIME_SECONDS` (default 3). Arrival-rate scheduling omits that sleep. `JOURNEY_RATE` counts journey starts per `JOURNEY_TIME_UNIT`, not HTTP requests. Select the rate from the intended workload and measured duration; each journey sends many requests. Busy VUs can cause dropped iterations, which fail the arrival-rate threshold.
+Independent role workloads use the randomized delays in the role-based run guide. Arrival-rate scheduling omits the legacy end-of-attempt sleep. `JOURNEY_RATE` counts journey starts per `JOURNEY_TIME_UNIT`, not HTTP requests. Select the rate from the intended workload and measured duration; each journey sends many requests. Busy VUs can cause dropped iterations, which fail the arrival-rate threshold.
 
 ## Run and retain reports
 
@@ -101,7 +103,7 @@ Threshold failures are valid measured failures, not a reason to discard reports 
 
 ## Acceptance and interpretation
 
-Functional scenarios require `checks: rate==1`; basic smoke also gates HTTP errors below 5% and HTTP p95 below 3000ms. Performance profiles currently require:
+Functional scenarios require `checks: rate==1`; basic smoke also gates HTTP errors below 5% and HTTP p95 below 3000ms. Legacy arrival-rate thresholds require the following. Independent-role targets and integrity gates are defined in the role-based guide:
 
 - Business-scenario HTTP failure rate `<1%`, p95 `<3000ms`, and p99 `<5000ms`.
 - Checks and `journey_success` rates `>99%`.
@@ -120,7 +122,7 @@ For comparisons, use an earlier actual run from `k6/results/` or a user-provided
 
 ## Extend or repair the suite
 
-Reuse `flows/` for business actions, `helpers/` for shared mechanics, and `scenarios/` for orchestration. Keep shared performance options in `config/performance.js` and completion instrumentation in `flows/performance-journey.js`. Preserve setup-session reuse when extending performance scenarios.
+Reuse `flows/` for business actions, `helpers/` for shared mechanics, and `scenarios/` for orchestration. Keep role workload options in `config/role-load.mjs` and orchestration in `flows/role-journeys.js`. Legacy arrival-rate options and instrumentation remain in `config/performance.js` and `flows/performance-journey.js`. Preserve setup-session reuse when extending performance scenarios.
 
 Use `helpers/unique-id.js` for identifiers that must remain distinct under concurrency. Pass created IDs into downstream actions rather than substituting static fixture IDs. Check HTTP status, business success, and required IDs before continuing. Preserve the full-journey completion check in `finally`, so early exits and exceptions count as failures.
 

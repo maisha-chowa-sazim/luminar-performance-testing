@@ -5,22 +5,22 @@ import { requiredEnvValue } from '../helpers/http.js';
 
 const styleFixture = JSON.parse(open('../data/style.json'));
 
-export function buildStylePayload() {
+export function buildStylePayload(runId = '') {
     const suffix = uniqueId();
     const base = JSON.parse(JSON.stringify(styleFixture));
 
     return {
         ...base,
-        name: `${base.name} ${suffix}`,
+        name: `${base.name} ${runId ? `${runId} ` : ''}${suffix}`,
         buyerId: requiredEnvValue('LUMINAR_BUYER_ID'),
     };
 }
 
-export function createStyle(token) {
+export function createStyle(token, runId = '') {
     const baseUrl = requiredEnvValue('BASE_URL');
     const factoryId = requiredEnvValue('LUMINAR_FACTORY_ID');
     const organizationId = requiredEnvValue('LUMINAR_ORGANIZATION_ID');
-    const payload = buildStylePayload();
+    const payload = buildStylePayload(runId);
 
     const resp = http.post(`${baseUrl}/api/v1/styles`, JSON.stringify(payload), {
         headers: {
@@ -46,7 +46,7 @@ export function createStyle(token) {
     });
 
     if (!ok) {
-        console.error(`Style create failed: ${resp.status} ${resp.body}`);
+        console.error(`Style create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;
@@ -66,7 +66,7 @@ export function getCreatedStyleId(resp) {
     });
 
     if (!ok) {
-        console.error(`Could not read created style ID: ${resp?.status} ${resp?.body}`);
+        console.error(`Could not read created style ID: ${resp?.status} [response redacted]`);
     }
 
     return styleId;
@@ -98,7 +98,7 @@ export function getStyleDetails(token, styleId) {
     });
 
     if (!ok) {
-        console.error(`Style details failed: ${resp.status} ${resp.body}`);
+        console.error(`Style details failed: ${resp.status} [response redacted]`);
         return null;
     }
 

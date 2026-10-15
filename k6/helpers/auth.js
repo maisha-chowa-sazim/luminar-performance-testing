@@ -107,7 +107,7 @@ export function login(role = 'merchandiser') {
     });
 
     if (!ok) {
-        console.error(`Login failed for ${role}: ${resp.status} ${resp.body}`);
+        console.error(`Login failed for ${role}: ${resp.status} [response redacted]`);
         return null;
     }
 

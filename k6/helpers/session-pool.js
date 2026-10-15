@@ -18,6 +18,9 @@ const delay = numberSetting('LOGIN_DELAY_SECONDS', 0.1);
 const retries = numberSetting('LOGIN_MAX_RETRIES');
 if (!Number.isInteger(retries)) throw new Error('LOGIN_MAX_RETRIES must be an integer');
 const maxWait = numberSetting('LOGIN_MAX_RETRY_WAIT_SECONDS', 0.1);
+// Authentication throttling windows can exceed the ordinary inter-account delay.
+const retryBase = __ENV.LOGIN_RETRY_BASE_SECONDS?.trim()
+    ? numberSetting('LOGIN_RETRY_BASE_SECONDS', 0.1) : 30;
 
 export function validateAccounts() {
     if (typeof __ENV.BASE_URL !== 'string' || !__ENV.BASE_URL.trim()) throw new Error('BASE_URL is required');
@@ -53,7 +56,7 @@ export function authenticateAccount(account) {
         });
         if (response.status !== 429 || attempt === retries) break;
         const header = Object.entries(response.headers).find(([key]) => key.toLowerCase() === 'retry-after')?.[1];
-        const wait = Math.max(delay, retryAfterSeconds(header) ?? delay * (2 ** attempt));
+        const wait = Math.max(delay, retryAfterSeconds(header) ?? retryBase * (2 ** attempt));
         // Never retry sooner than Retry-After when it exceeds our allowed wait.
         if (wait > maxWait) break;
         console.warn(`${account.label}: HTTP 429; retrying in ${wait}s`);

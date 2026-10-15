@@ -2,62 +2,43 @@ import { uniqueId } from '../helpers/unique-id.js';
 import http from 'k6/http';
 import { check } from 'k6';
 import { requiredEnvValue } from '../helpers/http.js';
+import { shipmentDate } from '../helpers/shipment-date.mjs';
 
-export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOverride = '') {
+const purchaseFixture = JSON.parse(open('../data/purchase.json'));
+
+export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOverride = '', runId = '') {
     const styleId = styleIdOverride || requiredEnvValue('LUMINAR_STYLE_ID');
     const buyerId = requiredEnvValue('LUMINAR_BUYER_ID');
 
     if (styleIdOverride && !styleComboIdOverride) {
         return {
             buyerId,
-            buyerPoNumber: `K6-${uniqueId()}`,
+            buyerPoNumber: `K6-${runId ? `${runId}-` : ''}${uniqueId()}`,
             styles: [{ styleId }],
         };
     }
 
     const styleComboId = styleComboIdOverride || requiredEnvValue('LUMINAR_STYLE_COMBO_ID');
+    const payload = JSON.parse(JSON.stringify(purchaseFixture));
     return {
+        ...payload,
         buyerId,
-        buyerPoNumber: `BPO-${uniqueId()}`,
+        buyerPoNumber: `BPO-${runId ? `${runId}-` : ''}${uniqueId()}`,
         paymentProviderId: requiredEnvValue('LUMINAR_PAYMENT_PROVIDER_ID'),
         styles: [{ styleId, selectedStyleComboIds: styleComboIdOverride ? [styleComboId] : [] }],
-        teamId: null,
-        productionFlow: ['CUTTING', 'SEWING', 'FINISHING', 'PACKING'],
-        shipments: [
-            {
-                shipmentMode: 'AIR',
-                shipmentDate: requiredEnvValue('LUMINAR_SHIPMENT_DATE'),
-                portOfDestination: 'Constanta',
-                deliveryNumber: null,
-                orderItems: [
-                    {
-                        styleId,
-                        styleComboId,
-                        size: 'M',
-                        quantity: 400,
-                        unitPriceCurrency: 'USD',
-                        unitPrice: 5,
-                    },
-                    {
-                        styleId,
-                        styleComboId,
-                        size: 'L',
-                        quantity: 200,
-                        unitPriceCurrency: 'USD',
-                        unitPrice: 5,
-                    },
-                ],
-            },
-        ],
-        status: 'PENDING_APPROVAL',
+        shipments: payload.shipments.map(shipment => ({
+            ...shipment,
+            shipmentDate: shipmentDate(shipment.shipmentDate),
+            orderItems: shipment.orderItems.map(item => ({ ...item, styleId, styleComboId })),
+        })),
     };
 }
 
-export function createPurchaseOrder(token, styleId = '', styleComboId = '') {
+export function createPurchaseOrder(token, styleId = '', styleComboId = '', runId = '') {
     const baseUrl = requiredEnvValue('BASE_URL');
     const factoryId = requiredEnvValue('LUMINAR_FACTORY_ID');
     const organizationId = requiredEnvValue('LUMINAR_ORGANIZATION_ID');
-    const payload = buildPurchaseOrderPayload(styleId, styleComboId);
+    const payload = buildPurchaseOrderPayload(styleId, styleComboId, runId);
     const activeToken = token || __ENV.SAVED_SESSION_TOKEN;
 
     const resp = http.post(`${baseUrl}/api/v1/purchase-orders`, JSON.stringify(payload), {
@@ -84,7 +65,7 @@ export function createPurchaseOrder(token, styleId = '', styleComboId = '') {
     });
 
     if (!ok) {
-        console.error(`Purchase order create failed: ${resp.status} ${resp.body}`);
+        console.error(`Purchase order create failed: ${resp.status} [response redacted]`);
     }
 
     return resp;
@@ -104,7 +85,7 @@ export function getCreatedPurchaseOrderId(resp) {
     });
 
     if (!ok) {
-        console.error(`Could not read created purchase order ID: ${resp?.status} ${resp?.body}`);
+        console.error(`Could not read created purchase order ID: ${resp?.status} [response redacted]`);
     }
 
     return orderId;
