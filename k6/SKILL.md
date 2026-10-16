@@ -44,7 +44,7 @@ The business scenarios create persistent styles, samples, BOMs, costings, orders
 
 ## Select a scenario
 
-For independent Merchandiser/Inventory concurrency, read [the role-based run guide](../docs/role-based-load-testing.md) and use `load-roles` through the Node runner (`npm run test:roles`). It uses the declared `*_ACCOUNT_COUNT`/`*_ACCOUNT_<n>_*` pools, two scenarios capped at 50 total VUs, randomized think time, durable atomic handoff, and stock read-back verification. The `test:roles:smoke`, `test:roles:10`, `test:roles:20`, and `test:roles:50` scripts select the documented workload. Legacy session guidance below applies to the arrival-rate scenario, not independent-role load. Verify the guide's fixture and costing-contract prerequisites before live execution.
+For independent Merchandiser/Inventory concurrency, read [the role-based run guide](../docs/role-based-load-testing.md) and use `load-roles` through the Node runner (`npm run test:roles`). It uses the declared `*_ACCOUNT_COUNT`/`*_ACCOUNT_<n>_*` pools, two scenarios capped at 50 total VUs, randomized think time, durable atomic handoff, and GRN/work-order receipt read-back verification. The `test:roles:smoke`, `test:roles:10`, `test:roles:20`, and `test:roles:50` scripts select the documented workload. Legacy session guidance below applies to the arrival-rate scenario, not independent-role load. Verify the guide's fixture and costing-contract prerequisites before live execution.
 
 Use only entrypoints that exist in `k6/scenarios/`.
 

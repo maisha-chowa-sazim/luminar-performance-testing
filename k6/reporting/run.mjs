@@ -77,6 +77,11 @@ try {
     }
     if (dashboardEnabled) {
         childEnvironment.K6_WEB_DASHBOARD = 'true';
+        // The embedded UI can crash when a chart gains series after setup.
+        // Keep HTTP charts and show late-arriving execution/business metrics as stats.
+        if (!childEnvironment.XK6_DASHBOARD_CONFIG && !existsSync('.dashboard.json')) {
+            childEnvironment.XK6_DASHBOARD_CONFIG = path.join(root, 'k6/config/dashboard.json');
+        }
         childEnvironment.K6_WEB_DASHBOARD_OPEN ??= childEnvironment.K6_WEB_DASHBOARD_PORT === '-1' ? 'false' : 'true';
         childEnvironment.K6_WEB_DASHBOARD_EXPORT ||= path.join(directory, 'k6-dashboard.html');
         const host = childEnvironment.K6_WEB_DASHBOARD_HOST || 'localhost';
@@ -118,7 +123,7 @@ try {
         const ledger = coordinator.snapshot();
         metadata.roleHandoff = ledger.stats;
         metadata.roleFailures = [...ledger.workflows, ...ledger.orders].filter(value => value.state === 'failed')
-            .map(value => ({ id: value.id, step: value.step, kind: value.kind, httpStatus: value.httpStatus }));
+            .map(value => ({ id: value.id, step: value.step, kind: value.kind, httpStatus: value.httpStatus, errorCode: value.errorCode }));
         metadata.profile = `Independent roles: ${roleConfiguration.merchandiser} Merchandiser + ${roleConfiguration.inventory} Inventory VUs; ramp ${roleConfiguration.rampUp}, steady ${roleConfiguration.steady}, ramp-down ${roleConfiguration.rampDown}; producer grace ${roleConfiguration.grace}; drain ${roleConfiguration.drain}`;
     }
     await writeFile(path.join(directory, 'metadata.json'), JSON.stringify(metadata, null, 2));

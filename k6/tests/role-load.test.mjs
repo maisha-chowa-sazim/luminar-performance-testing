@@ -185,6 +185,41 @@ test('a failed create stops dependent business actions and an ambiguous receipt 
     }
 });
 
+test('inventory verifies receipt quantities without inspection or stock API calls', () => {
+    const h = runtimeHarness(), calls = [];
+    const Metric = class { add() {} };
+    Object.assign(h.ctx, { execution: { vu: { idInTest: 1 } }, Counter: Metric, Rate: Metric, Trend: Metric });
+    vm.runInContext(readFileSync('k6/flows/role-journeys.js', 'utf8').replace(/import[\s\S]*?from '[^']+';\n/g, '').replace(/^export /gm, ''), h.ctx);
+    const claim = { id: 'order', styleId: 'style', purchaseOrderId: 'purchase', claim: 'claim' };
+    const order = received => ({ id: 'order', status: received ? 'RECEIVED' : 'SENT_TO_SUPPLIER', items: [{ measurementUnit: 'pieces', variants: [
+        { id: 'variant', style: { id: 'style' }, purchaseOrder: { id: 'purchase' }, quantity: '250', receivedQuantity: received ? '250' : '0' },
+    ] }] });
+    const grn = { id: 'grn', workOrder: { id: 'order' }, items: [{ id: 'item', poItemVariant: { id: 'variant' }, receivedQuantity: '250', addedToInventoryQuantity: '0', measurementUnit: 'pieces' }] };
+    let lists = 0;
+    Object.assign(h.ctx, {
+        uniqueId: () => 'id', console: { warn: message => assert.fail(message) }, sessionFor: () => ({ token: 'synthetic' }), think() {},
+        coordinate: (route, body) => { calls.push(route); return route === '/account' ? { index: 0 } : route === '/claim' ? { order: claim } : {}; },
+        readApplication: (_path, name) => {
+            if (name === 'work_order_find') return order(false);
+            if (name === 'work_order_get') return order(true);
+            if (name === 'grn_get') return grn;
+            if (name === 'grn_list') return ++lists === 1 ? { data: [], meta: { total: 0 } } : { data: [grn], meta: { total: 1 } };
+            assert.fail(`Unexpected read: ${name}`);
+        },
+        writeApplication: (_method, path, payload) => {
+            calls.push(path);
+            assert.ok(!path.includes('inspect'));
+            assert.equal(payload.qcStatus, undefined);
+            assert.equal(path, '/api/v1/grn');
+            return { status: 201, json: () => ({ success: true, data: grn }) };
+        },
+    });
+    h.ctx.inventoryJourney({ config: { ...roleConfig({}), think: h.ctx.thinkRanges({}), thinkScale: 0 }, runId: 'synthetic' });
+    assert.ok(calls.includes('/finish'));
+    assert.equal(calls.includes('/failed'), false);
+    assert.deepEqual(calls.filter(path => path.startsWith('/api')), ['/api/v1/grn']);
+});
+
 test('k6 parses both independent scenarios with the correct maximum allocation without API traffic', () => {
     const result = spawnSync('k6', ['inspect', '--include-system-env-vars', 'k6/scenarios/load-roles.js'], {
         encoding: 'utf8', env: { ...process.env, ROLE_TOTAL_VUS: '50', LOGIN_DELAY_SECONDS: '1', LOGIN_MAX_RETRIES: '2', LOGIN_MAX_RETRY_WAIT_SECONDS: '120' },

@@ -28,10 +28,24 @@ test('purchase payload resolves fixture dates without a shipment environment val
     assert.equal(payload.shipments[0].shipmentMode, fixture.shipments[0].shipmentMode);
     assert.equal(payload.buyerId, 'buyer');
     assert.equal(payload.paymentProviderId, 'provider');
+    assert.equal(payload.currency, 'USD');
     for (const item of payload.shipments[0].orderItems) {
         assert.equal(item.styleId, 'new-style');
         assert.equal(item.styleComboId, 'new-combo');
     }
     assert.deepEqual(payload.shipments[0].orderItems.map(item => item.quantity), [400, 200]);
     assert.deepEqual(fixture.shipments[0].shipmentDate, { daysFromToday: 30, utcOffsetMinutes: 360 });
+    const minimal = ctx.buildPurchaseOrderPayload('new-style');
+    assert.equal(minimal.currency, 'USD');
+    assert.equal(minimal.styles[0].styleId, 'new-style');
+});
+
+test('purchase payload rejects a missing or unsupported order currency before HTTP submission', () => {
+    for (const currency of [undefined, '', 'INVALID']) {
+        const data = { ...fixture, currency };
+        const ctx = vm.createContext({ open: () => JSON.stringify(data), uniqueId: () => 'unique', http: {}, check() {}, shipmentDate,
+            requiredEnvValue: () => 'synthetic-id' });
+        vm.runInContext(readFileSync('k6/flows/purchase-order.js', 'utf8').replace(/import[^\n]+\n/g, '').replace(/^export /gm, ''), ctx);
+        assert.throws(() => ctx.buildPurchaseOrderPayload('style', 'combo'), /supported purchase-order currency/);
+    }
 });

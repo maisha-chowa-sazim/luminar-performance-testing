@@ -1,0 +1,220 @@
+{
+  "title": "Luminar k6 dashboard",
+  "tabs": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "sections": [
+        {
+          "id": "overview.stats",
+          "panels": [
+            {
+              "id": "stats.requests",
+              "title": "HTTP Request Rate",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "http_reqs[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "id": "stats.latency",
+              "title": "HTTP p95",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "http_req_duration[?!tags && p95]"
+                }
+              ]
+            },
+            {
+              "id": "stats.failures",
+              "title": "HTTP Failure Rate",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "http_req_failed[?!tags && rate]"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "overview.http",
+          "summary": "HTTP totals include setup and local coordination. Application-scoped acceptance metrics are in the PDF and HTML stakeholder reports.",
+          "panels": [
+            {
+              "id": "chart.vus",
+              "title": "Active VUs",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "vus[?!tags && value]"
+                }
+              ]
+            },
+            {
+              "id": "chart.requests",
+              "title": "HTTP Request Rate",
+              "kind": "chart",
+              "series": [
+                {
+                  "query": "http_reqs[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "id": "chart.latency",
+              "title": "HTTP Response Time",
+              "kind": "chart",
+              "series": [
+                {
+                  "query": "http_req_duration[?!tags && (avg || p90 || p95 || p99)]"
+                }
+              ]
+            },
+            {
+              "id": "chart.failures",
+              "title": "HTTP Failure Rate",
+              "kind": "chart",
+              "series": [
+                {
+                  "query": "http_req_failed[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "id": "chart.iterations",
+              "title": "Iteration Duration",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "iteration_duration[?!tags && (avg || p90 || p95 || p99)]"
+                }
+              ]
+            },
+            {
+              "id": "chart.received",
+              "title": "Data Received Rate",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "data_received[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "id": "chart.sent",
+              "title": "Data Sent Rate",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "data_sent[?!tags && rate]"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "overview.business",
+          "title": "Business workflows",
+          "panels": [
+            {
+              "id": "chart.created",
+              "title": "Work Orders Created",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "created_work_orders[?!tags && count]"
+                }
+              ]
+            },
+            {
+              "id": "chart.completed",
+              "title": "Inventory Workflows Completed",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "inventory_completed[?!tags && count]"
+                }
+              ]
+            },
+            {
+              "id": "chart.merchandiser.failures",
+              "title": "Merchandiser Workflows Failed",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "merchandiser_failed[?!tags && count]"
+                }
+              ]
+            },
+            {
+              "id": "chart.inventory.failures",
+              "title": "Inventory Workflows Failed",
+              "kind": "stat",
+              "series": [
+                {
+                  "query": "inventory_failed[?!tags && count]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "summary",
+      "title": "Summary",
+      "sections": [
+        {
+          "id": "summary.all",
+          "panels": [
+            {
+              "id": "summary.trends",
+              "title": "Trends",
+              "kind": "summary",
+              "fullWidth": true,
+              "series": [
+                {
+                  "query": "[?!tags && trend]"
+                }
+              ]
+            },
+            {
+              "id": "summary.counters",
+              "title": "Counters",
+              "kind": "summary",
+              "series": [
+                {
+                  "query": "[?!tags && counter]"
+                }
+              ]
+            },
+            {
+              "id": "summary.rates",
+              "title": "Rates",
+              "kind": "summary",
+              "series": [
+                {
+                  "query": "[?!tags && rate]"
+                }
+              ]
+            },
+            {
+              "id": "summary.gauges",
+              "title": "Gauges",
+              "kind": "summary",
+              "series": [
+                {
+                  "query": "[?!tags && gauge]"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

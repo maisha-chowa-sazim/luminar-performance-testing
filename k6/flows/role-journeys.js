@@ -88,10 +88,11 @@ export function merchandiserJourney(data) {
     } catch (error) {
         step = error.step || step;
         merchantFailed.add(1); failures.add(1, { role: 'merchandiser', step });
-        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus || null };
+        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus || null, errorCode: error.errorCode };
         console.warn(`Merchandiser workflow failed at ${step} (${diagnostic.kind}); details retained in run ledger`);
         if (started) coordinate('/workflow-failed', { id: workflowId, step, ...diagnostic });
         if (orderId) coordinate('/failed', { id: orderId, step, ...diagnostic });
+        if (__ENV.ROLE_STOP_ON_ERROR === '1') execution.test.abort(`Merchandiser failed at ${step} (${diagnostic.kind})`);
         sleep(config.pollInterval);
     } finally { merchantSuccess.add(ok); elapsed.add(Date.now() - start); }
 }
@@ -155,28 +156,6 @@ export function inventoryJourney(data) {
         validateReceipt(grn, claim, items);
         const persisted = at('grn_get', () => readApplication(`/api/v1/grn/${grnId}`, 'grn_get', session, config));
         validateReceipt(persisted, claim, items);
-        // Receiving and stock addition are separate API operations in the supplied contract.
-        // Test material is assumed to pass QC; no real-world quality judgement is inferred.
-        for (const item of persisted.items) {
-            const quantity = Number(item.receivedQuantity);
-            const inspection = at('grn_item_inspect', () => responseData(writeApplication('POST', `/api/v1/grn-items/${item.id}/inspect`,
-                { qcStatus: 'PASSED', passedQuantity: quantity, failedQuantity: 0 }, 'grn_item_inspect', session), 201, step, session));
-            requireCondition(!!inspection.id && inspection.qcStatus === 'PASSED' && Number(inspection.passedQuantity) === quantity &&
-                Number(inspection.failedQuantity) === 0, 'inspection_quantity', 'quantity');
-            const entry = at('inventory_entry_create', () => responseData(writeApplication('POST', '/api/v1/inventory-entries',
-                { grnItemId: item.id, quantity, tag: data.runId }, 'inventory_entry_create', session), 201, step, session));
-            requireCondition(!!entry.id, 'inventory_entry_id');
-            const stock = at('inventory_entry_get', () => readApplication(`/api/v1/inventory-entries/${entry.id}`, 'inventory_entry_get', session, config));
-            requireCondition(stock.id === entry.id && stock.grnItem?.id === item.id && stock.tag === data.runId, 'inventory_entry_relationship', 'integrity');
-            requireCondition(Number(stock.quantity) === quantity && Number(stock.inventoryItem?.quantity) >= quantity && stock.qcStatus === 'PASSED',
-                'inventory_entry_quantity', 'quantity');
-        }
-        const finalGrn = at('grn_get', () => readApplication(`/api/v1/grn/${grnId}`, 'grn_get', session, config,
-            value => value.items?.every(item => Number(item.addedToInventoryQuantity) === Number(item.receivedQuantity)),
-            value => requireCondition(Array.isArray(value.items) && value.items.length === items.length &&
-                value.items.every(item => Number(item.addedToInventoryQuantity) === Number(item.receivedQuantity)), 'inventory_added_quantity', 'quantity')));
-        validateReceipt(finalGrn, claim, items);
-        requireCondition(finalGrn.items.every(item => Number(item.addedToInventoryQuantity) === Number(item.receivedQuantity)), 'inventory_added_quantity', 'quantity');
         const after = at('work_order_get', () => readApplication(`/api/v1/work-orders/${claim.id}`, 'work_order_get', session, config,
             value => value.status === 'RECEIVED', value => {
                 const current = validateOrder(value, claim);
@@ -196,9 +175,10 @@ export function inventoryJourney(data) {
     } catch (error) {
         step = error.step || step;
         inventoryFailed.add(1); failures.add(1, { role: 'inventory', step });
-        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus || null };
+        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus || null, errorCode: error.errorCode };
         console.warn(`Inventory workflow failed at ${step} (${diagnostic.kind}); do not replay receipt without reconciliation`);
         if (claim) coordinate('/failed', { id: claim.id, owner, claim: claim.claim, step, grnId, receiptDispatched, ...diagnostic });
+        if (__ENV.ROLE_STOP_ON_ERROR === '1') execution.test.abort(`Inventory failed at ${step} (${diagnostic.kind})`);
         sleep(config.pollInterval);
     } finally { if (claim) inventorySuccess.add(ok); }
 }

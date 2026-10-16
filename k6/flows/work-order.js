@@ -5,8 +5,15 @@ import { getApiUrl, requiredEnvValue, tenantHeaders } from '../helpers/http.js';
 
 const workOrderFixture = JSON.parse(open('../data/work-order.json'));
 
-export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', styleId = '') {
+export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', styleId = '', purchaseOrder = null) {
     const payload = JSON.parse(JSON.stringify(workOrderFixture));
+    if (!['USD', 'BDT', 'EUR', 'CNY', 'INR'].includes(payload.currency)) {
+        throw new Error('k6/data/work-order.json must define a supported work-order currency');
+    }
+    const linked = Boolean(purchaseOrderId || styleId);
+    if (linked && (!purchaseOrderId || !styleId || purchaseOrder?.id !== purchaseOrderId || !Array.isArray(purchaseOrder.orderItems))) {
+        throw new Error('Matching purchase-order details and style ID are required for work-order creation');
+    }
 
     return {
         ...payload,
@@ -14,16 +21,57 @@ export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', style
         buyerId: requiredEnvValue('LUMINAR_BUYER_ID'),
         items: payload.items.map((item) => ({
             ...item,
-            variants: item.variants.map((variant) => ({
-                ...variant,
-                ...(purchaseOrderId ? { purchaseOrderId } : {}),
-                ...(styleId ? { styleId } : {}),
-            })),
+            variants: item.variants.map((variant) => {
+                if (!linked) return variant;
+                const sizes = variant.garmentSizes;
+                if (!Array.isArray(sizes) || !sizes.length) throw new Error('Work-order variant requires garmentSizes');
+                const candidates = purchaseOrder.orderItems.filter(row => row.style?.id === styleId && sizes.includes(row.size));
+                if (!sizes.every(size => candidates.some(row => row.size === size))) {
+                    throw new Error('Work-order garment style/sizes do not match the purchase order');
+                }
+                const colors = [...new Set(candidates.map(row => row.color))];
+                const color = colors.includes(variant.garmentColor) ? variant.garmentColor : colors.length === 1 ? colors[0] : null;
+                if (typeof color !== 'string' || !color) throw new Error('Work-order garment color is missing or ambiguous in the purchase order');
+                const rows = candidates.filter(row => row.color === color);
+                if (!sizes.every(size => rows.some(row => row.size === size)) ||
+                    rows.some(row => !Number.isFinite(row.quantity) || row.quantity <= 0)) {
+                    throw new Error('Work-order garment sizes/quantities do not match the purchase order');
+                }
+                const garments = rows.reduce((sum, row) => sum + row.quantity, 0);
+                const consumption = Number(variant.consumption), wastage = Number(variant.wastagePercentage ?? 0);
+                if (!Number.isFinite(consumption) || consumption <= 0 || !Number.isFinite(wastage) || wastage < 0) {
+                    throw new Error('Work-order consumption and wastage must be valid non-negative decimals');
+                }
+                const quantity = Number((garments * consumption * (1 + wastage / 100)).toFixed(4));
+                if (quantity <= 0) throw new Error('Calculated work-order material quantity must be positive');
+                // The old group UUID belongs to unrelated fixture data. This field
+                // is optional in the create contract; let the API assign grouping.
+                const { variantGroupId, ...fields } = variant;
+                return { ...fields, purchaseOrderId, styleId, garmentColor: color,
+                    garmentsQuantity: String(garments), quantity: String(quantity) };
+            }),
         })),
     };
 }
 
 export function createWorkOrder(token, purchaseOrderId = '', styleId = '') {
+    // Validate fixture data before reserving a number, which is a server-side write.
+    let payload = buildWorkOrderPayload('');
+    let purchaseOrder = null;
+    if (purchaseOrderId) {
+        const response = http.get(getApiUrl(`/api/v1/purchase-orders/${purchaseOrderId}`), {
+            headers: tenantHeaders(token), tags: { feature: 'purchase-order', name: 'purchase_order_get' }, timeout: '30s',
+        });
+        try {
+            const body = response.json();
+            if (response.status === 200 && body.success === true) purchaseOrder = body.data;
+        } catch { /* Invalid purchase details fail before a reservation is made. */ }
+        if (!check(purchaseOrder, { 'work-order purchase details match the created order': value => value?.id === purchaseOrderId })) {
+            console.error(`Work-order skipped: purchase-order read failed (HTTP ${response.status})`);
+            return null;
+        }
+    }
+    payload = buildWorkOrderPayload('', purchaseOrderId, styleId, purchaseOrder);
     const reservationResp = http.post(
         getApiUrl('/api/v1/work-orders/reserve-number'),
         null,
@@ -56,7 +104,7 @@ export function createWorkOrder(token, purchaseOrderId = '', styleId = '') {
         console.error('Work-order creation skipped: reservation response has no ID.');
         return null;
     }
-    const payload = buildWorkOrderPayload(reservationId, purchaseOrderId, styleId);
+    payload.reservationId = reservationId;
     const resp = http.post(
         getApiUrl('/api/v1/work-orders'),
         JSON.stringify(payload),

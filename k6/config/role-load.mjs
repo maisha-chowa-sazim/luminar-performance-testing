@@ -49,10 +49,10 @@ export function roleConfig(env) {
 
 export const OPERATIONS = ['login_sign_in_email', 'style_create', 'style_get', 'sample_create',
     'tech_pack_upload_urls', 'tech_pack_file_upload', 'tech_pack_create', 'bom_create',
-    'pre_costing_create', 'pre_costing_submit', 'purchase_order_create', 'work_order_reserve_number',
+    'pre_costing_create', 'pre_costing_submit', 'purchase_order_create', 'purchase_order_get', 'work_order_reserve_number',
     'work_order_create', 'approval_bom', 'approval_costing', 'approval_purchase_order',
     'approval_work_order', 'work_order_sent_to_supplier', 'work_order_find', 'work_order_get',
-    'grn_create', 'grn_get', 'grn_list', 'grn_item_inspect', 'inventory_entry_create', 'inventory_entry_get'];
+    'grn_create', 'grn_get', 'grn_list'];
 
 export function roleOptions(config) {
     const stages = users => [

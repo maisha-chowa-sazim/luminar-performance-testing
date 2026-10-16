@@ -6,9 +6,11 @@
 
 Merchandiser creates style → tech pack/uploads → sample → BOM → pre-costing/submission → purchase order → work order. Existing executive BOM/costing/purchase approvals and senior-merchandiser work-order approval/supplier transition are retained. The order becomes available to Inventory only after a read-back confirms `SENT_TO_SUPPLIER` and the expected style/purchase relationships.
 
-Inventory claims one current-run order, retrieves it from the application, verifies every variant and measurement unit, and checks that no prior GRN exists. It receives the full ordered quantities for all variants, rather than the legacy fixture's fixed 120 units for one variant. It then verifies the GRN, records passing QC for test material, adds each GRN item to stock, and reads back stock entries, GRN added quantities, work-order received quantities/status, and exactly one GRN for the order. Any prerequisite/relationship/quantity failure stops that workflow.
+Inventory claims one current-run order, retrieves it from the application, verifies every variant and measurement unit, and checks that no prior GRN exists. It receives the full ordered quantities for all variants, rather than the legacy fixture's fixed 120 units for one variant. It then reads back the GRN, verifies work-order received quantities/status, and confirms exactly one GRN for the order. Any prerequisite/relationship/quantity failure stops that workflow.
 
-**QC assumption:** test material is simulated as entirely passing inspection. The new scenario therefore needs `accessory-inspection.create`, `accessory-inventory.create/read`, `accessory-grn.create/read`, and `work-order.read` permissions. This is an explicit test fixture assumption, not a real quality assessment. Failed QC/permission/business responses fail the test; the script does not bypass them.
+QC is not implemented and is excluded from this flow: no inspection request is sent and no QC pass status is required or fabricated. Inventory work is limited to receiving items. Stock-entry creation and stock-added quantity checks are also excluded. Receiving verifies GRN quantities, work-order state, and receipt uniqueness. The scenario needs `accessory-grn.create/read` and `work-order.read` permissions and their implemented features.
+
+The smoke run stops automatically on workflow failure (`ROLE_STOP_ON_ERROR=1`), after preserving its ledger. See [the inspection investigation](k6-inspection-investigation.md) for the earlier QA failure and partial receipt requiring reconciliation. Inspection is no longer a prerequisite for this test.
 
 The local OpenAPI specification documents work-order list/detail APIs, GRN list/detail/create, inspections, and stock entries. It does **not** document an atomic receiving claim. Work-order number reservation reserves a new number, not an Inventory claim. A mutable JavaScript global or `SharedArray` cannot coordinate independent VUs.
 
@@ -19,12 +21,12 @@ stateDiagram-v2
     [*] --> created: Work order created and registered
     created --> ready: Approvals, supplier state, read-back validated
     ready --> claimed: Atomic single-consumer claim
-    claimed --> received: GRN and stock read-backs validated
+    claimed --> received: GRN and work-order receipt read-backs validated
     created --> failed: Processing failure
     claimed --> failed: Receipt or verification failure
 ```
 
-Claims never expire or automatically return to the queue. An HTTP timeout, 401, 409, 429, 5xx, or interrupted POST may have committed a non-idempotent operation. The script never retries create/receive/inspection/stock writes. Failed or interrupted claims remain failed/claimed in the ledger and backlog. Reconcile them with application records before taking any manual recovery action. A lost claim response can leave a claimed order; it is retained, not reassigned.
+Claims never expire or automatically return to the queue. An HTTP timeout, 401, 409, 429, 5xx, or interrupted POST may have committed a non-idempotent operation. The script never retries create/receive writes. Failed or interrupted claims remain failed/claimed in the ledger and backlog. Reconcile them with application records before taking any manual recovery action. A lost claim response can leave a claimed order; it is retained, not reassigned.
 
 The coordinator is authoritative for **one local Node runner and its k6 process**. Restart/resume, distributed/cloud k6 workers, and concurrent runs using the same accounts are not supported. Its key is not written to reports or the ledger. Application processing by users outside this test is not protected by the coordinator; use dedicated accounts and an isolated seeded QA tenant. Duplicate GRN read-backs and nonzero initial received quantities detect observable interference.
 
@@ -50,6 +52,10 @@ Before live execution, check:
 `LUMINAR_SHIPMENT_DATE` is no longer required or used. `purchase.json` supplies the shipment-date rule, and the payload builder resolves it at execution time. For example, October 16, 2026 resolves to November 15, 2026.
 
 **Contract discrepancy requiring live confirmation:** existing `flows/pre-costing.js` uses style-level `/api/v1/styles/{id}/costings` routes. The supplied OpenAPI snapshot records purchase-order-level costing routes. The new scenario retains the existing helper and workflow order rather than inventing a replacement. Verify this route and approval prerequisites on QA before trusting results.
+
+The current QA purchase-order API also requires a top-level `currency`, separately from shipment-item `unitPriceCurrency`. Keep the supported currency in `k6/data/purchase.json` (`USD` by default). This field is absent from the older OpenAPI snapshot; its omission was reproduced as HTTP 400, and the corrected request was verified with HTTP 201. See the [purchase-order investigation](k6-purchase-order-investigation.md).
+
+Work orders likewise require top-level `currency` in `k6/data/work-order.json`. When linking a newly created purchase order, the helper reads its actual style/size/color rows, derives garment counts and material quantities from consumption/wastage, and omits stale fixture grouping UUIDs before reserving a number. Missing or ambiguous garment matches fail locally. This corrected work-order request and its saved relationships/quantities were verified in QA; see the [work-order investigation](k6-work-order-investigation.md).
 
 ## Commands
 
@@ -104,7 +110,7 @@ Use `ROLE_*` settings rather than `K6_VUS`, `K6_STAGES`, segmentation, or other 
 | `ROLE_POLL_TIMEOUT_SECONDS`, `ROLE_POLL_INTERVAL_SECONDS` | `60`, `2` | Bounded application read/state polling and idle queue polling interval |
 | `ROLE_API_P95_MS`, `ROLE_API_P99_MS` | `2000`, `5000` | Provisional application HTTP targets |
 | `ROLE_HTTP_FAILURE_RATE` | `0.01` | Application HTTP failure rate must be below this value |
-| `ROLE_COMPLETION_RATE` | `0.99` | Received-and-stock-verified workflows / all attempted workflows must be at least this value |
+| `ROLE_COMPLETION_RATE` | `0.99` | Receipt-verified workflows / all attempted workflows must be at least this value |
 
 Each scenario's peak is bounded by its role allocation; the two peaks sum to at most 50, including retiring VUs. Inventory stays at its allocated count through producer ramp-down, producer grace, and drain before ramping down itself. This maintains consumers while producers finish. Any remaining backlog still counts as unreceived; draining does not redefine it as success.
 
@@ -127,6 +133,10 @@ These are assumptions to replace with observed behavior. Delays follow business 
 
 Load runs automatically open the standard k6 dashboard at `http://localhost:5665`. Close its browser tab when the test finishes so k6 can exit and finalize reports. `K6_WEB_DASHBOARD=false` disables it; `K6_WEB_DASHBOARD_PORT=-1` exports HTML without a live dashboard server.
 
+The runner loads `k6/config/dashboard.json` using k6's native `XK6_DASHBOARD_CONFIG` option. This works around a reproduced k6 2.2.0 embedded UI crash (`Cannot convert undefined or null to object`) when new chart series appear after authentication setup. HTTP request rate, latency, and failure graphs remain time series. VUs, iteration duration, network throughput, and business counters use native stat panels so their late appearance does not clear the page. Metrics and acceptance thresholds are unchanged. The Summary tab and exported dashboard report use the same layout.
+
+An explicitly configured `XK6_DASHBOARD_CONFIG` or repository-root `.dashboard.json` takes precedence. Custom layouts can reintroduce the crash if charts gain series after they first render. Restart the test and reload the dashboard after changing its configuration; an already-running k6 process retains its original layout. This workaround was browser-tested against a local synthetic workload, without QA traffic.
+
 Every Node run produces the existing PDF/HTML reports, summary JSON when available, metadata, dashboard export, and `handoff-ledger.json` under a unique `k6/results/` directory. The ledger retains every started producer workflow, known created entity IDs (including partially failed flows), order relationships, claim ownership, state, timestamps, and sanitized failure categories. There is no automatic recovery/replay from this file.
 
 Endpoint summaries include request counts/rates, average, p90/p95/p99, and HTTP errors. Functional check counts remain visible. Business metrics include:
@@ -145,8 +155,10 @@ Application HTTP thresholds use `traffic:application` and exclude coordinator re
 
 ## Data management and validation
 
-Style names, buyer PO numbers, GRN numbers, approval feedback, and stock tags identify the run where the existing contracts support it; linked IDs and the ledger identify remaining entities. The test creates persistent records and uploads real fixture files. There is no complete safe teardown API in this suite. Reset only the approved disposable QA seed snapshot and test storage prefix through the environment's existing process, preserving the ledger for reconciliation. Do not delete ordinary users' data or silently rerun failed receipts.
+Style names, buyer PO numbers, GRN numbers, and approval feedback identify the run where the existing contracts support it; linked IDs and the ledger identify remaining entities. The test creates persistent records and uploads real fixture files. There is no complete safe teardown API in this suite. Reset only the approved disposable QA seed snapshot and test storage prefix through the environment's existing process, preserving the ledger for reconciliation. Do not delete ordinary users' data or silently rerun failed receipts.
 
 Run `npm run test:reporting` for offline checks. They validate allocation limits, credential selection, claim concurrency, failure retention, quantities/relationships, safe session renewal, failed-step behavior, report assessment, k6 scenario parsing, PDF/dashboard exports, and actual isolated k6 VUs handing off **synthetic** orders through the local coordinator. These are tooling tests, not proof that Luminar accepts the business payloads or meets performance targets.
+
+The browser regression also checks the live dashboard across setup, VU activation, and delayed business metrics using isolated headless Chrome and local HTTP requests. It uses the standard macOS Chrome path or `DASHBOARD_TEST_BROWSER`; it skips with an explanation when no browser binary is available.
 
 Live validation still requires QA confirmation of the retained costing route/master data. Run the smoke command, inspect its ledger and PDF, and confirm one complete registered order, one verified receipt, correct quantities, no remaining backlog, no duplicate receipts, and no integrity errors before attempting 10, 20, or 50 VUs.

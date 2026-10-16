@@ -9,10 +9,15 @@ const purchaseFixture = JSON.parse(open('../data/purchase.json'));
 export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOverride = '', runId = '') {
     const styleId = styleIdOverride || requiredEnvValue('LUMINAR_STYLE_ID');
     const buyerId = requiredEnvValue('LUMINAR_BUYER_ID');
+    const currency = purchaseFixture.currency;
+    if (!['USD', 'BDT', 'EUR', 'CNY', 'INR'].includes(currency)) {
+        throw new Error('k6/data/purchase.json must define a supported purchase-order currency');
+    }
 
     if (styleIdOverride && !styleComboIdOverride) {
         return {
             buyerId,
+            currency,
             buyerPoNumber: `K6-${runId ? `${runId}-` : ''}${uniqueId()}`,
             styles: [{ styleId }],
         };
@@ -23,6 +28,7 @@ export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOver
     return {
         ...payload,
         buyerId,
+        currency,
         buyerPoNumber: `BPO-${runId ? `${runId}-` : ''}${uniqueId()}`,
         paymentProviderId: requiredEnvValue('LUMINAR_PAYMENT_PROVIDER_ID'),
         styles: [{ styleId, selectedStyleComboIds: styleComboIdOverride ? [styleComboId] : [] }],

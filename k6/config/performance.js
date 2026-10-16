@@ -13,7 +13,7 @@ export function performanceOptions(users) {
     const setupTimeout = __ENV.LOGIN_SETUP_TIMEOUT;
     if (!setupTimeout?.trim()) throw new Error('LOGIN_SETUP_TIMEOUT is required');
     const endpointMetrics = {};
-    for (const name of ['login_sign_in_email', 'style_create', 'style_get', 'sample_create', 'tech_pack_upload_urls', 'tech_pack_file_upload', 'tech_pack_create', 'bom_create', 'pre_costing_create', 'pre_costing_submit', 'purchase_order_create', 'work_order_reserve_number', 'work_order_create', 'work_order_sent_to_supplier', 'grn_create', 'approval_purchase_order', 'approval_bom', 'approval_costing', 'approval_work_order']) {
+    for (const name of ['login_sign_in_email', 'style_create', 'style_get', 'sample_create', 'tech_pack_upload_urls', 'tech_pack_file_upload', 'tech_pack_create', 'bom_create', 'pre_costing_create', 'pre_costing_submit', 'purchase_order_create', 'purchase_order_get', 'work_order_reserve_number', 'work_order_create', 'work_order_sent_to_supplier', 'grn_create', 'approval_purchase_order', 'approval_bom', 'approval_costing', 'approval_work_order']) {
         for (const metric of ['http_req_duration', 'http_req_failed', 'http_reqs']) {
             endpointMetrics[`${metric}{name:${name}}`] = [];
         }

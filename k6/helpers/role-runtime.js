@@ -68,9 +68,11 @@ export function responseData(response, status, step, session) {
     if (response?.status !== status) {
         check(false, { [`${step}: HTTP status validated`]: value => value });
         const httpStatus = response?.status || 0;
-        const kind = httpStatus === 0 ? 'transport_or_script' : httpStatus >= 500 ? 'backend' : httpStatus === 429 ? 'throttling' :
+        // Keep only this known non-sensitive API code; never retain arbitrary response text.
+        const errorCode = body?.error === 'FEATURE_DISABLED' ? 'FEATURE_DISABLED' : undefined;
+        const kind = errorCode ? 'feature_disabled' : httpStatus === 0 ? 'transport_or_script' : httpStatus >= 500 ? 'backend' : httpStatus === 429 ? 'throttling' :
             [401, 403].includes(httpStatus) ? 'authentication_or_permission' : httpStatus === 409 ? 'conflict' : 'validation_or_test_data';
-        throw Object.assign(new Error(`${step}: HTTP ${httpStatus}`), { kind, httpStatus });
+        throw Object.assign(new Error(`${step}: HTTP ${httpStatus}${errorCode ? ` (${errorCode})` : ''}`), { kind, httpStatus, errorCode });
     }
     requireCondition(body?.success === true && body.data !== undefined, step);
     return body.data;

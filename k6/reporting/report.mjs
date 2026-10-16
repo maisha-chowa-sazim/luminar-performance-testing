@@ -1,6 +1,4 @@
-import PDFDocument from 'pdfkit';
-import { createWriteStream } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
+import { writePresentation } from './presentation.mjs';
 
 const number = value => Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 const percent = value => Number.isFinite(value) ? `${(value * 100).toFixed(2)}%` : 'N/A';
@@ -73,11 +71,11 @@ export function reportModel(summary, metadata) {
             `Workflows attempted: ${handoff.attempted ?? 'N/A'}; Merchandiser completed: ${values('merchandiser_completed').count ?? 0}; failed: ${values('merchandiser_failed').count ?? 0}; success: ${percent(values('merchandiser_success').rate)}.`,
             `Work orders created: ${handoff.created ?? 'N/A'}; ready: ${handoff.ready ?? 'N/A'}; currently claimed: ${handoff.claimed ?? 'N/A'}; received and verified: ${handoff.received ?? 'N/A'}; failed: ${handoff.failed ?? 'N/A'}; unreceived backlog (includes failed/claimed): ${handoff.pending ?? 'N/A'}.`,
             `End-to-end completion against ALL attempted workflows: ${handoff.attempted ? percent(handoff.received / handoff.attempted) : 'N/A'}; Inventory success: ${percent(values('inventory_success').rate)}; failed receiving attempts: ${values('inventory_failed').count ?? 0}.`,
-            `End-to-end elapsed p95: ${number(values('e2e_elapsed_duration')['p(95)'])} ms; work-order creation to verified stock receipt p95: ${number(values('work_order_to_receipt_duration')['p(95)'])} ms. Both include human delays and queue waiting. HTTP latency measures request time separately.`,
+            `End-to-end elapsed p95: ${number(values('e2e_elapsed_duration')['p(95)'])} ms; work-order creation to verified item receipt p95: ${number(values('work_order_to_receipt_duration')['p(95)'])} ms. Both include human delays and queue waiting. HTTP latency measures request time separately.`,
             `Quantity violations: ${values('incorrect_inventory_quantities').count ?? 'N/A'}; data-integrity violations: ${values('data_integrity_violations').count ?? 'N/A'}; duplicate successful receipts: ${values('duplicate_successful_receipts').count ?? 'N/A'}; coordinator duplicate acknowledgements: ${handoff.duplicateAttempts ?? 'N/A'}.`,
             `Application HTTP latency p95: ${number(values('http_req_duration{traffic:application}')['p(95)'])} ms; p99: ${number(values('http_req_duration{traffic:application}')['p(99)'])} ms; errors: ${percent(values('http_req_failed{traffic:application}').rate)}. Aggregate HTTP totals also include local coordination and setup.`,
             'handoff-ledger.json retains created, ready, claimed, failed, and received orders and workflow failures. Claims are never automatically reassigned. Failed/ambiguous writes require manual reconciliation before any retry.',
-            'QC uses a test-data assumption that all received units pass. Stock entries and GRNs are read back and quantities checked. Shared executive/senior accounts perform prerequisite approvals inside Merchandiser VUs.',
+            'Receiving is verified through GRN and work-order quantity/status read-backs; QC and stock-entry operations are excluded. Shared executive/senior accounts perform prerequisite approvals inside Merchandiser VUs.',
             ...(metadata.roleFailures?.length ? metadata.roleFailures.map(value => `Failed record ${value.id}: step ${value.step}; category ${value.kind || 'unknown'}; HTTP ${value.httpStatus ?? 'not available'}.`) : ['No failed records recorded in the handoff ledger.']),
         ]]);
         const notes = sections.find(([heading]) => heading === 'Interpretation and next steps')[1];
@@ -90,28 +88,5 @@ export function reportModel(summary, metadata) {
 }
 
 export async function writeReports(directory, summary, metadata) {
-    const model = reportModel(summary, metadata);
-    const title = 'Luminar | Performance test report';
-    await writeFile(`${directory}/report.html`, `<!doctype html><html lang="en"><meta charset="utf-8"><title>${title}</title><style>body{font:15px/1.6 system-ui;max-width:1000px;margin:40px auto;color:#172b4d}h1{color:#123b59}h2{border-bottom:2px solid #dae5ed;padding-top:16px}li{margin:8px 0;overflow-wrap:anywhere}@media print{body{margin:0}h2{break-after:avoid}li{break-inside:avoid}}</style><h1>${title}</h1><p><strong>${model.status}</strong></p>${model.sections.map(([heading, lines]) => `<h2>${escape(heading)}</h2><ul>${lines.map(line => `<li>${escape(line)}</li>`).join('')}</ul>`).join('')}</html>`);
-    const doc = new PDFDocument({ size: 'A4', margin: 48, bufferPages: true, info: { Title: title, Author: 'Luminar QA' } });
-    const stream = createWriteStream(`${directory}/report.pdf`);
-    const finished = new Promise((resolve, reject) => { stream.on('finish', resolve); stream.on('error', reject); doc.on('error', reject); });
-    doc.pipe(stream);
-    doc.fontSize(22).fillColor('#123b59').text(title).moveDown(0.5);
-    doc.fontSize(15).fillColor(model.status === 'PASS' ? '#167348' : '#a43b23').text(model.status).moveDown();
-    for (const [heading, lines] of model.sections) {
-        if (doc.y > 690) doc.addPage();
-        doc.fillColor('#123b59').font('Helvetica-Bold').fontSize(13).text(heading).moveDown(0.5);
-        doc.fillColor('#243746').font('Helvetica').fontSize(10);
-        for (const line of lines) doc.text(line, { paragraphGap: 7 });
-        doc.moveDown();
-    }
-    const pages = doc.bufferedPageRange();
-    for (let i = 0; i < pages.count; i++) {
-        doc.switchToPage(i);
-        doc.fontSize(8).fillColor('#64748b').text(`Luminar QA | ${metadata.scenario} | ${i + 1} / ${pages.count}`, 48, 805, { lineBreak: false });
-    }
-    doc.end();
-    await finished;
-    return model.status;
+    return writePresentation(directory, summary, metadata, reportModel(summary, metadata).status);
 }
