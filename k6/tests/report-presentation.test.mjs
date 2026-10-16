@@ -19,11 +19,13 @@ test('visual assessment separates successful receiving from failed application l
     const model=presentationModel(summary,metadata,'FAIL');
     assert.equal(model.functional,'PASS');
     assert.equal(model.latency['p(95)'],3000);
-    assert.equal(model.cards[0][1],'3,000 ms');
+    assert.equal(model.cards[0][1],'3 s');
     assert.equal(model.failed.length,1);
     assert.equal(model.thresholds[0].ok,false);
     const html=renderHtml(model);
     assert.match(html,/Receiving completed successfully/);
+    assert.match(html,/<h1>Luminar Slice 1<\/h1>/);
+    assert.doesNotMatch(html,/3,000 ms/);
     assert.match(html,/Response-time distribution/);
     assert.match(html,/<svg role="img"/);
     assert.match(html,/<table>/);
