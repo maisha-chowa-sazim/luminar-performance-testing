@@ -2,7 +2,7 @@
 export function selectRoleAccounts(env, users, config) {
     const selected = {};
     const identities = new Set();
-    for (const [role, count] of [['merchandiser', config.merchandiser], ['inventory', config.inventory], ['executive', 1], ['seniorMerchandiser', 1]]) {
+    for (const [role, count] of [['merchandiser', config.merchandiser], ['inventory', config.inventory], ['seniorMerchandiser', 1]]) {
         const definition = users[role];
         const prefix = definition.accountsEnvPrefix;
         let candidates;

@@ -1,6 +1,4 @@
-import { approveResource } from '../helpers/approvals.js';
-import { login } from '../helpers/auth.js';
-import { createPreCosting, getCreatedPreCostingId, submitPreCostingForApproval } from '../flows/pre-costing.js';
+import { createPreCosting, getCreatedPreCostingId } from '../flows/pre-costing.js';
 import { createStyle, getCreatedStyleId } from '../flows/style.js';
 import { FUNCTIONAL_THRESHOLDS } from '../config/functional-thresholds.js';
 
@@ -30,18 +28,4 @@ export default function (data) {
         return;
     }
 
-    const submissionResponse = submitPreCostingForApproval(token, styleId, preCostingId);
-    if (submissionResponse?.status !== 200) {
-        return;
-    }
-
-    const executive = login('executive');
-    if (executive?.token) {
-        approveResource({
-            token: executive.token,
-            resourceType: 'pre-costing',
-            resourceId: preCostingId,
-            feedback: 'Approved by k6 pre-costing flow',
-        });
-    }
 }

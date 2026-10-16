@@ -1,17 +1,16 @@
 import { check } from 'k6';
-import { approveResource } from '../helpers/approvals.js';
 import { login } from '../helpers/auth.js';
 import { createBom, getCreatedBomId } from '../flows/bom.js';
-import { createPreCosting, getCreatedPreCostingId, submitPreCostingForApproval } from '../flows/pre-costing.js';
+import { createPreCosting, getCreatedPreCostingId } from '../flows/pre-costing.js';
 import { createPurchaseOrder, getCreatedPurchaseOrderId } from '../flows/purchase-order.js';
 import { createReceiveItem } from '../flows/receive-item.js';
 import { createSample } from '../flows/sample.js';
 import {
-    approveWorkOrder,
     createWorkOrder,
+    approveWorkOrder,
+    sendWorkOrderToSupplier,
     getCreatedWorkOrderId,
     getCreatedWorkOrderVariantId,
-    sendWorkOrderToSupplier,
 } from '../flows/work-order.js';
 import { createStyle, getCreatedStyleId, getStyleDetails } from '../flows/style.js';
 import { createTechPack } from '../flows/tech-pack.js';
@@ -79,11 +78,6 @@ function executeJourney(sessions) {
         return;
     }
 
-    const costingSubmission = submitPreCostingForApproval(merchandiserToken, styleId, costingId);
-    if (costingSubmission?.status !== 200) {
-        return;
-    }
-
     const purchaseOrderResponse = createPurchaseOrder(merchandiserToken, styleId, styleComboId);
     if (!isSuccessful(purchaseOrderResponse, 201)) {
         return;
@@ -105,55 +99,10 @@ function executeJourney(sessions) {
         return;
     }
 
-    const executive = (sessions ? sessions.executive : login('executive'));
-    if (!executive?.token) {
-        return;
-    }
-
-    const bomApproval = approveResource({
-        token: executive.token,
-        resourceType: 'bom',
-        resourceId: bomId,
-        feedback: 'Approved by k6 full journey',
-    });
-    if (bomApproval?.status !== 201) {
-        return;
-    }
-
-    const costingApproval = approveResource({
-        token: executive.token,
-        resourceType: 'pre-costing',
-        resourceId: costingId,
-        feedback: 'Approved by k6 full journey',
-    });
-    if (costingApproval?.status !== 201) {
-        return;
-    }
-
-    const purchaseOrderApproval = approveResource({
-        token: executive.token,
-        resourceType: 'purchase',
-        resourceId: purchaseOrderId,
-        feedback: 'Approved by k6 full journey',
-    });
-    if (purchaseOrderApproval?.status !== 201) {
-        return;
-    }
-
-    const seniorMerchandiser = (sessions ? sessions.seniorMerchandiser : login('seniorMerchandiser'));
-    if (!seniorMerchandiser?.token) {
-        return;
-    }
-
-    const workOrderApproval = approveWorkOrder(seniorMerchandiser.token, workOrderId);
-    if (workOrderApproval?.status !== 201) {
-        return;
-    }
-
-    const supplierStatus = sendWorkOrderToSupplier(seniorMerchandiser.token, workOrderId);
-    if (supplierStatus?.status !== 200) {
-        return;
-    }
+    const senior = sessions ? sessions.seniorMerchandiser : login('seniorMerchandiser');
+    if (!senior?.token) return;
+    if (!isSuccessful(approveWorkOrder(senior.token, workOrderId), 201)) return;
+    if (!isSuccessful(sendWorkOrderToSupplier(senior.token, workOrderId), 200)) return;
 
     const inventory = (sessions ? sessions.inventory : login('inventory'));
     if (!inventory?.token) {

@@ -18,10 +18,9 @@ function credentials() {
         env[`${role}_ACCOUNT_${i}_EMAIL`] = `${role}-${i}@example.test`;
         env[`${role}_ACCOUNT_${i}_PASSWORD`] = 'synthetic-password';
     }
-    for (const role of ['executive', 'seniorMerchandiser']) {
-        env[users[role].emailEnvKey] = `${role}@example.test`;
-        env[users[role].passwordEnvKey] = 'synthetic-password';
-    }
+
+    env.SENIOR_MERCHANDISER_EMAIL = 'senior@example.test';
+    env.SENIOR_MERCHANDISER_PASSWORD = 'synthetic-password';
     return env;
 }
 

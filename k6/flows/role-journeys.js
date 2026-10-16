@@ -5,10 +5,9 @@ import { createStyle } from './style.js';
 import { createTechPack } from './tech-pack.js';
 import { createSample } from './sample.js';
 import { createBom } from './bom.js';
-import { createPreCosting, submitPreCostingForApproval } from './pre-costing.js';
+import { createPreCosting } from './pre-costing.js';
 import { createPurchaseOrder } from './purchase-order.js';
 import { createWorkOrder, approveWorkOrder, sendWorkOrderToSupplier } from './work-order.js';
-import { approveResource } from '../helpers/approvals.js';
 import { uniqueId } from '../helpers/unique-id.js';
 import { coordinate, sessionFor, think, requireCondition, responseData, operation,
     readApplication, writeApplication, duplicateReceipts, duplicateAttempts } from '../helpers/role-runtime.js';
@@ -64,19 +63,12 @@ export function merchandiserJourney(data) {
         const bom = create('bom_create', () => createBom(session.token, style.id, details.combos[0].id));
         requireCondition(bom.styleId === style.id, 'bom_style_relationship', 'integrity'); think('bom', config);
         const costing = create('pre_costing_create', () => createPreCosting(session.token, style.id)); think('costing', config);
-        at('pre_costing_submit', () => responseData(submitPreCostingForApproval(session.token, style.id, costing.id), 200, step, session));
         const purchase = create('purchase_order_create', () => createPurchaseOrder(session.token, style.id, details.combos[0].id, data.runId));
         requireCondition(purchase.styles?.some(value => value.id === style.id), 'purchase_style_relationship', 'integrity'); think('purchase', config);
         const order = create('work_order_create', () => createWorkOrder(session.token, purchase.id, style.id));
         orderId = order.id;
         coordinate('/orders', { id: orderId, workflowId, styleId: style.id, purchaseOrderId: purchase.id });
         createdOrders.add(1);
-        // Preserve the established prerequisite approvals, using existing supporting role accounts.
-        const executive = sessionFor(data, 'executive', 0, config);
-        for (const [resourceType, resourceId] of [['bom', bom.id], ['pre-costing', costing.id], ['purchase', purchase.id]]) {
-            at(`approval_${resourceType}`, () => responseData(approveResource({ token: executive.token, resourceType,
-                resourceId, feedback: `Load test ${data.runId}` }), 201, step, executive));
-        }
         const senior = sessionFor(data, 'seniorMerchandiser', 0, config);
         at('approval_work_order', () => responseData(approveWorkOrder(senior.token, orderId), 201, step, senior));
         at('work_order_sent_to_supplier', () => responseData(sendWorkOrderToSupplier(senior.token, orderId), 200, step, senior));

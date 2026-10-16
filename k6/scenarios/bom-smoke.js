@@ -1,5 +1,3 @@
-import { approveResource } from '../helpers/approvals.js';
-import { login } from '../helpers/auth.js';
 import { createBom, getCreatedBomId } from '../flows/bom.js';
 import { createStyle, getCreatedStyleId, getStyleDetails } from '../flows/style.js';
 import { FUNCTIONAL_THRESHOLDS } from '../config/functional-thresholds.js';
@@ -30,14 +28,5 @@ export default function (data) {
             return;
         }
 
-        const executive = login('executive');
-        if (executive?.token) {
-            approveResource({
-                token: executive.token,
-                resourceType: 'bom',
-                resourceId: bomId,
-                feedback: 'Approved by k6 BOM flow',
-            });
-        }
     }
 }

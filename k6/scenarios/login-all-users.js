@@ -9,13 +9,13 @@ export const options = {
         login_all_users: {
             executor: 'shared-iterations',
             vus: 1,
-            iterations: 42,
+            iterations: 41,
             maxDuration,
         },
     },
     thresholds: {
         checks: ['rate==1'],
-        iterations: ['count==42'],
+        iterations: ['count==41'],
         // Retryable 429s remain visible, but final authentication decides success.
         'http_reqs{status:429}': [],
     },

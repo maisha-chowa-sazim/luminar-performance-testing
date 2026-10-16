@@ -17,7 +17,7 @@ export const options = {
     ...base,
     scenarios: {
         arrival_journey: {
-            executor: 'constant-arrival-rate',
+            executor: 'constant-arrival-rate', tags: { workload: 'api' },
             rate,
             timeUnit,
             duration,

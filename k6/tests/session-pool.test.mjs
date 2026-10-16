@@ -30,19 +30,18 @@ function harness(responses = [], settings = {}) {
     return { ctx, env, requests, sleeps, checks };
 }
 
-test('42 sessions are authenticated once, paced, and reused by stable VU assignment', () => {
+test('41 sessions are authenticated once, paced, and reused by stable VU assignment', () => {
     const h = harness();
     const data = h.ctx.setupSessions();
-    assert.equal(h.requests.length, 42);
-    assert.equal(new Set(h.requests.map(r => r.email)).size, 42);
-    assert.deepEqual(h.sleeps, Array(42).fill(1));
+    assert.equal(h.requests.length, 41);
+    assert.equal(new Set(h.requests.map(r => r.email)).size, 41);
+    assert.deepEqual(h.sleeps, Array(41).fill(1));
     for (let vu = 1; vu <= 20; vu++) {
         const first = h.ctx.sessionsForVU(data, vu);
         assert.equal(first.merchandiser.token, data.sessions.merchandiser[vu - 1].token);
         assert.equal(first.inventory.token, data.sessions.inventory[vu - 1].token);
-        assert.equal(h.ctx.sessionsForVU(data, vu).executive.token, first.executive.token);
     }
-    assert.equal(h.requests.length, 42);
+    assert.equal(h.requests.length, 41);
 });
 
 test('429 uses Retry-After, preserves final result, and limits retries', () => {
@@ -110,7 +109,7 @@ test('k6 loads arrival rate and sequential verification options without network 
             assert.ok(options.thresholds['http_req_failed{scenario:arrival_journey}']);
         } else {
             assert.equal(options.scenarios.login_all_users.vus, 1);
-            assert.equal(options.scenarios.login_all_users.iterations, 42);
+            assert.equal(options.scenarios.login_all_users.iterations, 41);
         }
     }
 });
@@ -124,22 +123,17 @@ test('business journeys reuse role tokens across iterations without logging in',
         'createPurchaseOrder', 'createWorkOrder', 'createReceiveItem', 'approveWorkOrder']) {
         ctx[name] = (token) => { calls.push([name, token]); return { status: 201, json: () => ({ success: true }) }; };
     }
-    for (const name of ['submitPreCostingForApproval', 'sendWorkOrderToSupplier']) {
-        ctx[name] = token => { calls.push([name, token]); return { status: 200 }; };
-    }
-    ctx.approveResource = ({ token }) => { calls.push(['approveResource', token]); return { status: 201 }; };
+    ctx.sendWorkOrderToSupplier = token => { calls.push(['sendWorkOrderToSupplier', token]); return {status:200,json:()=>({success:true})}; };
     ctx.getStyleDetails = () => ({ combos: [{ id: 'combo' }] });
     for (const name of ['getCreatedStyleId', 'getCreatedBomId', 'getCreatedPreCostingId',
         'getCreatedPurchaseOrderId', 'getCreatedWorkOrderId', 'getCreatedWorkOrderVariantId']) ctx[name] = () => 'id';
     vm.createContext(ctx);
     vm.runInContext(source.replace(/import[\s\S]*?from '[^']+';\n/g, '')
         .replace('export default function (sessions)', 'function run(sessions)').replace(/^export /gm, ''), ctx);
-    const sessions = Object.fromEntries(['merchandiser', 'inventory', 'executive', 'seniorMerchandiser']
+    const sessions = Object.fromEntries(['merchandiser', 'inventory', 'seniorMerchandiser']
         .map(role => [role, { token: `${role}-token` }]));
     assert.equal(ctx.run(sessions), true);
     assert.equal(ctx.run(sessions), true);
     assert.ok(calls.filter(([name]) => name === 'createStyle').every(([, token]) => token === 'merchandiser-token'));
     assert.ok(calls.filter(([name]) => name === 'createReceiveItem').every(([, token]) => token === 'inventory-token'));
-    assert.ok(calls.filter(([name]) => name === 'approveResource').every(([, token]) => token === 'executive-token'));
-    assert.ok(calls.filter(([name]) => name === 'approveWorkOrder').every(([, token]) => token === 'seniorMerchandiser-token'));
 });

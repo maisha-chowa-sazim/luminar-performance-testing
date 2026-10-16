@@ -57,7 +57,7 @@ export function createTechPack(token, styleId) {
         }),
         {
             headers: tenantHeaders(token),
-            tags: { feature: 'tech-pack', endpoint: 'createUploadUrls', name: 'tech_pack_upload_urls' },
+            tags: { workload: 'techpack', feature: 'tech-pack', endpoint: 'createUploadUrls', name: 'tech_pack_upload_urls' },
         },
     );
 
@@ -94,7 +94,7 @@ export function createTechPack(token, styleId) {
         const boundary = `k6-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         const uploadResp = http.post(uploadInfo.uploadUrl, buildMultipartBody(uploadInfo.fields, file, boundary), {
             headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
-            tags: { feature: 'tech-pack', endpoint: 'uploadTechPackFile', name: 'tech_pack_file_upload' },
+            tags: { workload: 'techpack', feature: 'tech-pack', endpoint: 'uploadTechPackFile', name: 'tech_pack_file_upload' },
         });
 
         const uploadOk = check(uploadResp, {
@@ -121,7 +121,7 @@ export function createTechPack(token, styleId) {
         JSON.stringify(payload),
         {
             headers: tenantHeaders(token),
-            tags: { feature: 'tech-pack', endpoint: 'createTechPack', name: 'tech_pack_create' },
+            tags: { workload: 'techpack', feature: 'tech-pack', endpoint: 'createTechPack', name: 'tech_pack_create' },
         },
     );
 

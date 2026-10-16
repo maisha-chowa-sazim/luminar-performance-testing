@@ -8,7 +8,7 @@ function harness(data = fixture) {
     const requests = [];
     const ctx = vm.createContext({
         open: () => JSON.stringify(data), requiredEnvValue: () => 'buyer',
-        getApiUrl: path => path, tenantHeaders: () => ({}), approveResource() {}, console: { error() {} },
+        getApiUrl: path => path, tenantHeaders: () => ({}), console: { error() {} },
         check: (value, rules) => Object.values(rules).every(rule => rule(value)),
         http: { get: url => {
             requests.push({ url, method: 'GET' });

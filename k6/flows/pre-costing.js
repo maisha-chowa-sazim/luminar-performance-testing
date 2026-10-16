@@ -69,31 +69,3 @@ export function getCreatedPreCostingId(resp) {
 
     return costingId;
 }
-
-export function submitPreCostingForApproval(token, styleId, costingId) {
-    const resp = http.patch(
-        getApiUrl(`/api/v1/styles/${styleId}/costings/${costingId}`),
-        JSON.stringify({ status: 'PENDING_APPROVAL' }),
-        {
-            headers: tenantHeaders(token),
-            tags: { feature: 'pre-costing', endpoint: 'submitForApproval', name: 'pre_costing_submit' },
-        },
-    );
-
-    const ok = check(resp, {
-        'pre-costing submission status is 200': (r) => r.status === 200,
-        'pre-costing submission returns success payload': (r) => {
-            try {
-                return r.json()?.success === true;
-            } catch (err) {
-                return false;
-            }
-        },
-    });
-
-    if (!ok) {
-        console.error(`Pre-costing submission failed: ${resp.status} [response redacted]`);
-    }
-
-    return resp;
-}

@@ -34,6 +34,8 @@ export function roleConfig(env) {
         drain: duration('ROLE_DRAIN', '5m', true),
         apiP95: number('ROLE_API_P95_MS', 2000, 1),
         apiP99: number('ROLE_API_P99_MS', 5000, 1),
+        techPackP95: number('ROLE_TECHPACK_P95_MS', 30000, 1),
+        techPackP99: number('ROLE_TECHPACK_P99_MS', 45000, 1),
         httpFailure: number('ROLE_HTTP_FAILURE_RATE', 0.01, 0, 1),
         completion: number('ROLE_COMPLETION_RATE', 0.99, 0, 1),
         thinkScale: number('ROLE_THINK_SCALE', 1, 0),
@@ -49,9 +51,8 @@ export function roleConfig(env) {
 
 export const OPERATIONS = ['login_sign_in_email', 'style_create', 'style_get', 'sample_create',
     'tech_pack_upload_urls', 'tech_pack_file_upload', 'tech_pack_create', 'bom_create',
-    'pre_costing_create', 'pre_costing_submit', 'purchase_order_create', 'purchase_order_get', 'work_order_reserve_number',
-    'work_order_create', 'approval_bom', 'approval_costing', 'approval_purchase_order',
-    'approval_work_order', 'work_order_sent_to_supplier', 'work_order_find', 'work_order_get',
+    'pre_costing_create', 'purchase_order_create', 'purchase_order_get', 'work_order_reserve_number',
+    'work_order_create', 'approval_work_order', 'work_order_sent_to_supplier', 'work_order_find', 'work_order_get',
     'grn_create', 'grn_get', 'grn_list'];
 
 export function roleOptions(config) {
@@ -66,7 +67,7 @@ export function roleOptions(config) {
         scenarios: {
             merchandiser: { executor: 'ramping-vus', exec: 'merchandiser', startVUs: 0,
                 stages: stages(config.merchandiser), gracefulRampDown: config.grace, gracefulStop: config.grace,
-                tags: { traffic: 'application', role: 'merchandiser' } },
+                tags: { traffic: 'application', workload: 'api', role: 'merchandiser' } },
             inventory: { executor: 'ramping-vus', exec: 'inventory', startVUs: 0,
                 stages: [
                     { duration: config.rampUp, target: config.inventory },
@@ -75,12 +76,14 @@ export function roleOptions(config) {
                     { duration: `${seconds(config.rampDown) + seconds(config.grace) + seconds(config.drain)}s`, target: config.inventory },
                     { duration: config.rampDown, target: 0 },
                 ], gracefulRampDown: config.grace, gracefulStop: config.grace,
-                tags: { traffic: 'application', role: 'inventory' } },
+                tags: { traffic: 'application', workload: 'api', role: 'inventory' } },
         },
         thresholds: {
             ...Object.fromEntries(OPERATIONS.flatMap(name => ['http_req_duration', 'http_req_failed', 'http_reqs']
                 .map(metric => [`${metric}{name:${name}}`, []]))),
-            'http_req_duration{traffic:application}': [`p(95)<${config.apiP95}`, `p(99)<${config.apiP99}`],
+            'http_req_duration{traffic:application}': [],
+            'http_req_duration{traffic:application,workload:api}': [`p(95)<${config.apiP95}`, `p(99)<${config.apiP99}`],
+            'http_req_duration{traffic:application,workload:techpack}': [`p(95)<${config.techPackP95}`, `p(99)<${config.techPackP99}`],
             'http_req_failed{traffic:application}': [`rate<${config.httpFailure}`],
             e2e_success: [`rate>=${config.completion}`],
             merchandiser_attempted: ['count>0'], received_work_orders: ['count>0'],

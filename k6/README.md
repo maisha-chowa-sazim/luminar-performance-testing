@@ -57,17 +57,17 @@ These scenarios create persistent records and upload objects. The API currently 
 
 ## Performance profiles
 
-Each profile runs the full style → sample → tech pack/upload → BOM → costing → purchase order → approvals → work order → item receipt journey. VUs represent concurrent journeys using shared role accounts, not distinct users. A three-second pause follows every finished attempt; set `THINK_TIME_SECONDS` to adjust it.
+Each profile runs the full style → sample → tech pack/upload → BOM → costing → purchase order → work order → item receipt journey. VUs represent concurrent journeys using shared role accounts, not distinct users. A three-second pause follows every finished attempt; set `THINK_TIME_SECONDS` to adjust it.
 
 The requested table has five load levels, all covered below. Durations **include** ramp-up and ramp-down. Graceful completion can add up to two minutes; it may also allow retiring VUs to finish during ramp-down.
 
 | Command | VUs | Ramp up | Steady load | Ramp down | Scheduled total |
 | --- | ---: | --- | --- | --- | --- |
 | `npm run test:load:5` | 5 | 1 min | 3 min | 1 min | 5 min |
-| `npm run test:load:10` | 10 | 2 min | 14 min | 2 min | 18 min |
-| `npm run test:load:20` | 20 | 2 min | 6 min | 2 min | 10 min |
-| `npm run test:load:50` | 50 | 2 min | 4 min | 2 min | 8 min |
-| `npm run test:load:100` | 100 | 1 min | 3 min | 1 min | 5 min |
+| `npm run test:loads:10` | 10 | 2 min | 14 min | 2 min | 18 min |
+| `npm run test:loads:20` | 20 | 2 min | 6 min | 2 min | 10 min |
+| `npm run test:loads:50` | 50 | 2 min | 4 min | 2 min | 8 min |
+| `npm run test:loads:100` | 100 | 1 min | 3 min | 1 min | 5 min |
 
 Configuration lives in `config/performance.js`; each scenario has its own entrypoint in `scenarios/load-<users>-users.js`. The default acceptance criteria are HTTP failures <1%, HTTP p95 <3000ms, p99 <5000ms, checks >99%, journey success >99%, and at least one started and successfully completed journey. These are **provisional SLOs**, not agreed business requirements. Stress profiles keep the same criteria to expose degradation.
 
@@ -115,3 +115,5 @@ npm run test:reporting
 ```
 
 This creates clearly named `report-selftest-*` synthetic example reports under ignored `results/`. They are not application performance results.
+
+Regular application API latency targets are p95 < 2s and p99 < 5s. Techpack upload-URL generation, file transfer, and creation use separate provisional targets: p95 < 30s and p99 < 45s, configurable with `ROLE_TECHPACK_P95_MS` and `ROLE_TECHPACK_P99_MS`. Work-order approval and the supplier-status transition use the senior-merchandiser account before receiving. BOM, costing and purchase-order approvals/submissions remain excluded.

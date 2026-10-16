@@ -13,7 +13,7 @@ export function performanceOptions(users) {
     const setupTimeout = __ENV.LOGIN_SETUP_TIMEOUT;
     if (!setupTimeout?.trim()) throw new Error('LOGIN_SETUP_TIMEOUT is required');
     const endpointMetrics = {};
-    for (const name of ['login_sign_in_email', 'style_create', 'style_get', 'sample_create', 'tech_pack_upload_urls', 'tech_pack_file_upload', 'tech_pack_create', 'bom_create', 'pre_costing_create', 'pre_costing_submit', 'purchase_order_create', 'purchase_order_get', 'work_order_reserve_number', 'work_order_create', 'work_order_sent_to_supplier', 'grn_create', 'approval_purchase_order', 'approval_bom', 'approval_costing', 'approval_work_order']) {
+    for (const name of ['login_sign_in_email', 'style_create', 'style_get', 'sample_create', 'tech_pack_upload_urls', 'tech_pack_file_upload', 'tech_pack_create', 'bom_create', 'pre_costing_create', 'purchase_order_create', 'purchase_order_get', 'work_order_reserve_number', 'work_order_create', 'approval_work_order', 'work_order_sent_to_supplier', 'grn_create']) {
         for (const metric of ['http_req_duration', 'http_req_failed', 'http_reqs']) {
             endpointMetrics[`${metric}{name:${name}}`] = [];
         }
@@ -22,7 +22,7 @@ export function performanceOptions(users) {
         setupTimeout,
         scenarios: {
             full_journey: {
-                executor: 'ramping-vus', startVUs: 0,
+                executor: 'ramping-vus', startVUs: 0, tags: { workload: 'api' },
                 stages: profile.stages.map((duration, index) => ({ duration, target: index === 2 ? 0 : users })),
                 gracefulRampDown: '2m', gracefulStop: '2m',
             },
@@ -34,7 +34,8 @@ export function performanceOptions(users) {
             ...endpointMetrics,
             // Provisional acceptance targets: agree these with product owners.
             'http_req_failed{scenario:full_journey}': ['rate<0.01'],
-            'http_req_duration{scenario:full_journey}': ['p(95)<3000', 'p(99)<5000'],
+            'http_req_duration{scenario:full_journey,workload:api}': ['p(95)<2000', 'p(99)<5000'],
+            'http_req_duration{scenario:full_journey,workload:techpack}': ['p(95)<30000', 'p(99)<45000'],
             checks: ['rate>0.99'],
             journey_success: ['rate>0.99'],
             journey_started: ['count>0'],

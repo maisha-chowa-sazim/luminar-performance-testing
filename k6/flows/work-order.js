@@ -1,6 +1,5 @@
 import http from 'k6/http';
 import { check } from 'k6';
-import { approveResource } from '../helpers/approvals.js';
 import { getApiUrl, requiredEnvValue, tenantHeaders } from '../helpers/http.js';
 
 const workOrderFixture = JSON.parse(open('../data/work-order.json'));
@@ -173,12 +172,15 @@ export function getCreatedWorkOrderVariantId(resp) {
 }
 
 export function approveWorkOrder(token, workOrderId) {
-    return approveResource({
-        token,
-        resourceType: 'work-order',
-        resourceId: workOrderId,
-        feedback: 'Approved by k6 work-order flow',
+    const response = http.post(getApiUrl(`/api/v1/approvals/WORK_ORDER/${workOrderId}/approve`),
+        JSON.stringify({ feedback: 'Approved by k6 work-order flow' }), {
+            headers: tenantHeaders(token), tags: { feature: 'work-order', name: 'approval_work_order' }, timeout: '30s',
+        });
+    check(response, {
+        'work-order approval status is 201': r => r.status === 201,
+        'work-order approval returns success': r => { try { return r.json()?.success === true; } catch { return false; } },
     });
+    return response;
 }
 
 export function sendWorkOrderToSupplier(token, workOrderId) {

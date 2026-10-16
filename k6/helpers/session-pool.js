@@ -24,8 +24,8 @@ const retryBase = __ENV.LOGIN_RETRY_BASE_SECONDS?.trim()
 
 export function validateAccounts() {
     if (typeof __ENV.BASE_URL !== 'string' || !__ENV.BASE_URL.trim()) throw new Error('BASE_URL is required');
-    if (accounts.length !== 42 || users.merchandiser.accounts.length !== 20 || users.inventory.accounts.length !== 20) {
-        throw new Error('Expected 20 merchandisers, 20 inventory users, executive and senior merchandiser');
+    if (accounts.length !== 41 || users.merchandiser.accounts.length !== 20 || users.inventory.accounts.length !== 20) {
+        throw new Error('Expected 20 merchandisers, 20 inventory users and one senior merchandiser');
     }
     const missing = accounts.flatMap((account) => [account.emailEnvKey, account.passwordEnvKey])
         .filter((key) => typeof __ENV[key] !== 'string' || !__ENV[key].trim());

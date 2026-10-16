@@ -53,3 +53,14 @@ test('saved report regeneration preserves native dashboard bytes and is repeatab
         assert.match(pdf.toString(),/%%EOF/);
     } finally { await rm(directory,{recursive:true,force:true}); }
 });
+
+test('reports separate regular API latency from techpack latency without changing historical gates', () => {
+    const current=structuredClone(summary);
+    current.metrics['http_req_duration{traffic:application,workload:api}']={values:{'p(95)':1500,'p(99)':4000}};
+    current.metrics['http_req_duration{traffic:application,workload:techpack}']={values:{'p(95)':20000,'p(99)':25000}};
+    const model=presentationModel(current,{...metadata,roleConfiguration:{...metadata.roleConfiguration,techPackP95:30000,techPackP99:45000}},'FAIL');
+    assert.equal(model.cards[0][1],'1.5 s');
+    assert.equal(model.cards.find(card=>card[0]==='Techpack p95')[1],'20 s');
+    assert.equal(model.cards.find(card=>card[0]==='Techpack p95')[2],'Target < 30 s');
+    assert.equal(summary.metrics['http_req_duration{traffic:application}'].thresholds['p(95)<2000'].ok,false);
+});

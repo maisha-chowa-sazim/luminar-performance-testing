@@ -1,5 +1,4 @@
-import { login, setupAuth } from '../helpers/auth.js';
-import { approveResource } from '../helpers/approvals.js';
+import { setupAuth } from '../helpers/auth.js';
 import { createStyle, getCreatedStyleId, getStyleDetails } from '../flows/style.js';
 import { createPurchaseOrder, getCreatedPurchaseOrderId } from '../flows/purchase-order.js';
 import { FUNCTIONAL_THRESHOLDS } from '../config/functional-thresholds.js';
@@ -38,14 +37,5 @@ export default function (data) {
             return;
         }
 
-        const executive = login('executive');
-        if (executive?.token) {
-            approveResource({
-                token: executive.token,
-                resourceType: 'purchase',
-                resourceId: purchaseOrderId,
-                feedback: 'Approved by k6 purchase-order flow',
-            });
-        }
     }
 }

@@ -1,10 +1,10 @@
 # Independent concurrent role load tests
 
-`k6/scenarios/load-roles.js` implements Approach B: Merchandiser and Inventory run as independent `ramping-vus` scenarios. Existing full-journey and arrival-rate scenarios remain available with their original behavior. The `test:load:5/10/20/50` npm commands also select this role-based scenario. Separate per-user load files and partial linked-journey entrypoints were removed; feature smoke tests remain available for diagnosis.
+`k6/scenarios/load-roles.js` implements Approach B: Merchandiser and Inventory run as independent `ramping-vus` scenarios. Existing full-journey and arrival-rate scenarios remain available with their original behavior. The `test:load:5` and `test:loads:10/20/50` npm commands also select this role-based scenario. Separate per-user load files and partial linked-journey entrypoints were removed; feature smoke tests remain available for diagnosis.
 
 ## Workflows and handoff
 
-Merchandiser creates style → tech pack/uploads → sample → BOM → pre-costing/submission → purchase order → work order. Existing executive BOM/costing/purchase approvals and senior-merchandiser work-order approval/supplier transition are retained. The order becomes available to Inventory only after a read-back confirms `SENT_TO_SUPPLIER` and the expected style/purchase relationships.
+Merchandiser creates style → tech pack/uploads → sample → BOM → pre-costing → purchase order → work order. Only work-order approval is required: the senior-merchandiser account approves the created work order and transitions it to `SENT_TO_SUPPLIER`. A read-back validates that status and the created style/purchase relationships before handoff. Inventory also requires `SENT_TO_SUPPLIER` and zero received quantities before sending a GRN. BOM, costing and purchase-order approvals/submissions remain excluded.
 
 Inventory claims one current-run order, retrieves it from the application, verifies every variant and measurement unit, and checks that no prior GRN exists. It receives the full ordered quantities for all variants, rather than the legacy fixture's fixed 120 units for one variant. It then reads back the GRN, verifies work-order received quantities/status, and confirms exactly one GRN for the order. Any prerequisite/relationship/quantity failure stops that workflow.
 
@@ -34,7 +34,7 @@ The coordinator is authoritative for **one local Node runner and its k6 process*
 
 The runner loads root `.env` as before; exported values take precedence. No credentials or environment files were changed. The root configuration currently contains `MERCHANDISER_ACCOUNT_COUNT=50` and `INVENTORY_ACCOUNT_COUNT=12` with numbered `*_ACCOUNT_<n>_EMAIL/PASSWORD` entries. The new scenario prefers this declared pool. Where it is absent, it supports the explicit account mappings in `k6/data/users.json`.
 
-For a 50-VU test, 40 distinct Merchandiser and 10 distinct Inventory identities are required. Setup also authenticates the existing executive and senior-merchandiser accounts for prerequisite approvals. These are supporting actions inside Merchandiser VUs, not additional k6 scenarios. Duplicate identities across selected accounts, blank variables, or insufficient accounts fail before business traffic. The coordinator assigns each business VU a stable role-account index without assuming global VU IDs are contiguous within a scenario.
+For a 50-VU test, 40 distinct Merchandiser and 10 distinct Inventory identities are required. Duplicate identities across selected accounts, blank variables, or insufficient accounts fail before business traffic. The coordinator assigns each business VU a stable role-account index without assuming global VU IDs are contiguous within a scenario.
 
 Setup authenticates only selected accounts sequentially using the existing bounded 429 handling. Sessions are reused. `ROLE_SESSION_MAX_AGE_SECONDS` controls proactive renewal at a workflow boundary. An expired session/401 fails the current dependent operation and invalidates the local token; the next safe workflow boundary renews it. Failed writes are never replayed. Login failures abort setup or fail the affected VU workflow. Raw response bodies, passwords, cookies, and tokens are omitted from diagnostics.
 
@@ -47,7 +47,7 @@ Before live execution, check:
 - `BASE_URL`, `LUMINAR_FACTORY_ID`, `LUMINAR_ORGANIZATION_ID`, `LUMINAR_BUYER_ID`, `LUMINAR_PAYMENT_PROVIDER_ID` match the seeded QA tenant.
 - Style size template, BOM measurable items, work-order suppliers/variants/groups, units, and binary upload fixtures are valid in that tenant. These are existing fixtures; their business validity cannot be established by static parsing alone.
 - Sample due/collection dates, work-order delivery dates, and the selected shipment date satisfy current business rules. Shipment dates are generated from the explicit relative-date rule in `k6/data/purchase.json`: today in Asia/Dhaka (UTC+06:00) plus 30 calendar days. Maintain the other fixture dates deliberately.
-- Supporting approval accounts and Inventory accounts have the required permissions.
+- Merchandiser and Inventory accounts have the required permissions.
 
 `LUMINAR_SHIPMENT_DATE` is no longer required or used. `purchase.json` supplies the shipment-date rule, and the payload builder resolves it at execution time. For example, October 16, 2026 resolves to November 15, 2026.
 
@@ -66,13 +66,13 @@ Run from the repository root after installing pinned dependencies with `npm ci` 
 npm run test:roles:smoke
 
 # 8 Merchandisers + 2 Inventory:
-npm run test:roles:10
+npm run test:loads:10
 
 # 16 Merchandisers + 4 Inventory:
-npm run test:roles:20
+npm run test:loads:20
 
 # 40 Merchandisers + 10 Inventory, 15-minute steady phase:
-npm run test:roles:50
+npm run test:loads:50
 ```
 
 Validate handoff at low load, then 10 → 20 → 50 separately after failures and data conditions are understood. These commands are alternatives, not an automatic sequence. A successful tiny smoke does not establish 50-VU capacity.
@@ -90,7 +90,7 @@ ROLE_TOTAL_VUS=20 ROLE_MERCHANDISER_VUS=15 ROLE_INVENTORY_VUS=5 \
 node --env-file=.env.qa k6/reporting/run.mjs load-roles
 
 # Dashboard HTML export without opening a live dashboard server:
-K6_WEB_DASHBOARD_PORT=-1 npm run test:roles:10
+K6_WEB_DASHBOARD_PORT=-1 npm run test:loads:10
 ```
 
 Use `ROLE_*` settings rather than `K6_VUS`, `K6_STAGES`, segmentation, or other workload overrides. The runner rejects those overrides for this scenario. Direct `k6 run` lacks the coordinator lifecycle; use the Node/npm runner.
@@ -155,10 +155,14 @@ Application HTTP thresholds use `traffic:application` and exclude coordinator re
 
 ## Data management and validation
 
-Style names, buyer PO numbers, GRN numbers, and approval feedback identify the run where the existing contracts support it; linked IDs and the ledger identify remaining entities. The test creates persistent records and uploads real fixture files. There is no complete safe teardown API in this suite. Reset only the approved disposable QA seed snapshot and test storage prefix through the environment's existing process, preserving the ledger for reconciliation. Do not delete ordinary users' data or silently rerun failed receipts.
+Style names, buyer PO numbers, GRN numbers, identify the run where the existing contracts support it; linked IDs and the ledger identify remaining entities. The test creates persistent records and uploads real fixture files. There is no complete safe teardown API in this suite. Reset only the approved disposable QA seed snapshot and test storage prefix through the environment's existing process, preserving the ledger for reconciliation. Do not delete ordinary users' data or silently rerun failed receipts.
 
 Run `npm run test:reporting` for offline checks. They validate allocation limits, credential selection, claim concurrency, failure retention, quantities/relationships, safe session renewal, failed-step behavior, report assessment, k6 scenario parsing, PDF/dashboard exports, and actual isolated k6 VUs handing off **synthetic** orders through the local coordinator. These are tooling tests, not proof that Luminar accepts the business payloads or meets performance targets.
 
 The browser regression also checks the live dashboard across setup, VU activation, and delayed business metrics using isolated headless Chrome and local HTTP requests. It uses the standard macOS Chrome path or `DASHBOARD_TEST_BROWSER`; it skips with an explanation when no browser binary is available.
 
 Live validation still requires QA confirmation of the retained costing route/master data. Run the smoke command, inspect its ledger and PDF, and confirm one complete registered order, one verified receipt, correct quantities, no remaining backlog, no duplicate receipts, and no integrity errors before attempting 10, 20, or 50 VUs.
+
+Techpack upload-URL generation, file uploads, and creation are tagged `workload:techpack`. Their configurable per-request latency targets are p95 < 30s and p99 < 45s (`ROLE_TECHPACK_P95_MS=30000`, `ROLE_TECHPACK_P99_MS=45000`). Regular API requests use `workload:api` and retain p95 < 2s / p99 < 5s. All application requests, including uploads, remain subject to the HTTP failure-rate gate. These are provisional request-latency budgets, not total multi-file workflow duration targets. Historical reports retain their original acceptance rules. Work-order approval and supplier transition are restored; this revision has not been rerun against QA.
+
+Setup authenticates one existing senior-merchandiser account (`SENIOR_MERCHANDISER_EMAIL` / `SENIOR_MERCHANDISER_PASSWORD`) in addition to the business-role pools. This shared supporting session performs work-order approval and supplier transitions inside Merchandiser VUs and does not add concurrent VUs. No executive account is required.
