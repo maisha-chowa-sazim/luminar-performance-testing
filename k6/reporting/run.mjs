@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { writeReports } from './report.mjs';
 import { startRoleCoordinator } from './role-coordinator.mjs';
-import { roleConfig } from '../config/role-load.mjs';
+import { roleConfig, configuredThinkRanges } from '../config/role-load.mjs';
 import { selectRoleAccounts } from '../helpers/role-accounts.mjs';
 import { shipmentDate } from '../helpers/shipment-date.mjs';
 
@@ -62,6 +62,7 @@ let coordinator;
 try {
     const childEnvironment = { ...process.env, K6_SUMMARY_MODE: 'full' };
     if (roleConfiguration) {
+        metadata.roleThinkRanges = configuredThinkRanges(process.env);
         const runId = process.env.ROLE_RUN_ID || `lt-${randomUUID().slice(0, 12)}`;
         coordinator = await startRoleCoordinator(directory, runId, roleConfiguration);
         Object.assign(childEnvironment, {
@@ -90,7 +91,7 @@ try {
             console.log('k6 web dashboard: HTML export only (HTTP server disabled)');
         } else {
             console.log(`k6 web dashboard: http://${host}:${port}`);
-            console.log('Close the dashboard tab after the test so k6 can exit and finish PDF/HTML reporting.');
+            console.log('Close the dashboard tab after the test so k6 can exit and finish HTML reporting.');
         }
         console.log(`Dashboard HTML export: ${childEnvironment.K6_WEB_DASHBOARD_EXPORT}`);
     }
@@ -128,7 +129,7 @@ try {
     }
     await writeFile(path.join(directory, 'metadata.json'), JSON.stringify(metadata, null, 2));
     const status = await writeReports(directory, summary, metadata);
-    console.log(`\n${status}: ${directory}/report.pdf\nHTML, summary JSON (when available), and metadata are in the same directory.`);
+    console.log(`\n${status}: ${directory}/report.html\nSummary JSON (when available), and metadata are in the same directory.`);
     if (dashboardEnabled) {
         if (existsSync(childEnvironment.K6_WEB_DASHBOARD_EXPORT)) console.log(`k6 dashboard report: ${childEnvironment.K6_WEB_DASHBOARD_EXPORT}`);
         else console.log('k6 dashboard HTML was not generated; the run may have ended before enough dashboard data was collected.');

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, writeFile, rm, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { presentationModel, renderHtml } from '../reporting/presentation.mjs';
@@ -29,7 +29,7 @@ test('visual assessment separates successful receiving from failed application l
     assert.match(html,/Response-time distribution/);
     assert.match(html,/<svg role="img"/);
     assert.match(html,/<table>/);
-    assert.match(html,/synthetic &lt;check&gt;/);
+    assert.doesNotMatch(html,/Functional check evidence/);
     assert.doesNotMatch(html,/synthetic <check>/);
 });
 test('missing latency is N\/A and missing completion is incomplete, not a passing zero', () => {
@@ -46,11 +46,10 @@ test('saved report regeneration preserves native dashboard bytes and is repeatab
         for(let i=0;i<2;i++)assert.equal(await writeReports(directory,summary,metadata),'FAIL');
         assert.equal(await readFile(path.join(directory,'k6-dashboard-native.html'),'utf8'),native);
         const html=await readFile(path.join(directory,'k6-dashboard.html'),'utf8');
-        assert.match(html,/k6-dashboard-native.html/);
+        assert.doesNotMatch(html,/Open original k6 time-series dashboard|Summary data|Handoff ledger/);
         assert.equal(html,await readFile(path.join(directory,'report.html'),'utf8'));
-        const pdf=await readFile(path.join(directory,'report.pdf'));
-        assert.equal(pdf.subarray(0,5).toString(),'%PDF-');
-        assert.match(pdf.toString(),/%%EOF/);
+        assert.doesNotMatch(html,/report\.pdf|Download PDF/);
+        assert.equal((await readdir(directory)).some(name=>name.endsWith('.pdf')),false);
     } finally { await rm(directory,{recursive:true,force:true}); }
 });
 
@@ -61,6 +60,79 @@ test('reports separate regular API latency from techpack latency without changin
     const model=presentationModel(current,{...metadata,roleConfiguration:{...metadata.roleConfiguration,techPackP95:30000,techPackP99:45000}},'FAIL');
     assert.equal(model.cards[0][1],'1.5 s');
     assert.equal(model.cards.find(card=>card[0]==='Techpack p95')[1],'20 s');
-    assert.equal(model.cards.find(card=>card[0]==='Techpack p95')[2],'Target < 30 s');
+    assert.match(model.cards.find(card=>card[0]==='Techpack p95')[2],/Target < 30 s/);
     assert.equal(summary.metrics['http_req_duration{traffic:application}'].thresholds['p(95)<2000'].ok,false);
+});
+
+test('headline throughput uses application scope and preserves unknown historical measurements', () => {
+    const current=structuredClone(summary);
+    current.metrics['http_reqs{traffic:application}']={values:{count:60,rate:1.2}};
+    current.metrics['http_req_duration{traffic:application}'].values.avg=1800;
+    const model=presentationModel(current,{...metadata,roleConfiguration:{...metadata.roleConfiguration,thinkScale:0}},'FAIL');
+    assert.equal(model.cards.find(card=>card[0]==='Requests per second (RPS)')[1],'1.2 req/s');
+    assert.equal(model.cards.find(card=>card[0]==='Application requests measured')[1],'60');
+    assert.equal(model.cards.find(card=>card[0]==='Average response time')[1],'1.8 s');
+    assert.equal(model.allTraffic.count,100);
+    assert.equal(model.pacing,'Human think time disabled');
+    const historical=presentationModel(summary,metadata,'FAIL');
+    assert.equal(historical.cards.find(card=>card[0]==='Requests per second (RPS)')[1],'N/A req/s');
+    assert.equal(historical.pacing,'Not recorded');
+    const html=renderHtml(model);
+    assert.match(html,/About 95% of requests are this fast or faster/);
+    assert.match(html,/API response time/);
+    assert.match(html,/<td>3 s<\/td>/);
+    assert.match(html,/Review slow endpoints/);
+});
+
+test('simplified template retains throttling evidence and removes requested sections and title links', () => {
+    const current = structuredClone(summary);
+    current.metrics.vus = { values: { max: 1 } };
+    current.metrics['http_reqs{traffic:application}'] = { values: { count: 80, rate: 1.6 } };
+    current.metrics['http_reqs{traffic:application,status:429}'] = { values: { count: 4 } };
+    current.metrics['http_req_duration{traffic:application,expected_response:false}'] = { values: { avg: 20, 'p(95)':30 } };
+    const html = renderHtml(presentationModel(current, metadata, 'FAIL'));
+    assert.match(html,/<td>429<\/td><td>4<\/td><td>5%<\/td>/);
+    assert.match(html,/No reviewed bottleneck analysis/);
+    assert.doesNotMatch(html, /<\/?(?:details|summary)\b/);
+    assert.match(html, /Requests per second \(RPS\)/);
+    for (const removed of ['Appendix: run configuration and provenance', 'Functional check evidence', 'Recommendations, owners, and retest', 'Measurement validity and baseline', 'Decision summary', 'Environment and workload', 'Supporting counts and load', 'Load and measurement context', 'Open original k6 time-series dashboard', 'Summary data', 'Handoff ledger', 'Workflow reconciliation', 'Metric definitions', 'Other approvals, QC', 'Stakeholder sign-off is not recorded.', 'Generated from saved k6 summary', 'Application requests per second']) {
+        assert.equal(html.includes(removed), false, removed);
+    }
+});
+
+test('analyst review is escaped, optional, and cannot override measured acceptance', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'luminar-review-'));
+    try {
+        await writeFile(path.join(directory, 'review.json'), JSON.stringify({
+            status: 'PASS', objective: '<script>example</script>', applicationBuild: 'qa-build-123',
+            findings: [{ observation: 'Slow receipt', evidence: 'trace-123', impact: 'Delayed receipt', recommendation: 'Investigate database waits' }],
+            actions: [{ priority: 'P1', action: 'Investigate', owner: 'Assigned developer', retestCriteria: 'Same seed and pacing' }],
+        }));
+        assert.equal(await writeReports(directory, summary, metadata), 'FAIL');
+        const html = await readFile(path.join(directory, 'report.html'), 'utf8');
+        assert.match(html,/Overall <strong>FAIL/);
+        assert.match(html,/&lt;script&gt;example&lt;\/script&gt;/);
+        assert.doesNotMatch(html,/<script>example/);
+        assert.doesNotMatch(html,/qa-build-123/);
+        assert.match(html,/Unconfirmed/);
+        assert.doesNotMatch(html,/Assigned developer/);
+        assert.equal(summary.metrics['http_req_duration{traffic:application}'].thresholds['p(95)<2000'].ok,false);
+    } finally { await rm(directory,{recursive:true,force:true}); }
+});
+
+test('explicit revised response target reassesses the report without changing saved metrics', async () => {
+    const directory = await mkdtemp(path.join(tmpdir(), 'luminar-revised-target-'));
+    try {
+        const original = structuredClone(summary);
+        delete original.metrics['http_req_duration{traffic:application}'].thresholds;
+        original.metrics['http_req_duration{traffic:application,workload:api}'] = {
+            values: { 'p(95)':1500, 'p(99)':3000 }, thresholds: { 'p(95)<2000':{ok:true}, 'p(99)<5000':{ok:true} },
+        };
+        await writeFile(path.join(directory, 'review.json'), JSON.stringify({ regularApiTargetMs:2000 }));
+        assert.equal(await writeReports(directory, original, {...metadata,exitCode:0}), 'FAIL');
+        const html = await readFile(path.join(directory, 'report.html'), 'utf8');
+        assert.match(html,/p\(99\)&lt;2 s/);
+        assert.equal(original.metrics['http_req_duration{traffic:application,workload:api}'].thresholds['p(99)<5000'].ok,true);
+        assert.equal(metadata.roleConfiguration.apiP99,5000);
+    } finally { await rm(directory,{recursive:true,force:true}); }
 });

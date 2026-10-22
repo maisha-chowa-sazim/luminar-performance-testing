@@ -112,30 +112,30 @@ General `npm run test:roles` defaults to 10 VUs. A manually configured total of 
 
 ## 4. Think time and realistic pacing
 
-After business actions, the scenario draws a uniform random delay within each range and multiplies it by `ROLE_THINK_SCALE`. This spreads requests and represents time spent reviewing or entering information. These assumptions require calibration against real usage; they are not recorded production user behavior.
+After business actions, the scenario draws a uniform random delay within each range and multiplies it by `ROLE_THINK_SCALE`. This spreads requests and represents time spent reviewing or entering information. These accelerated-workload defaults apply at `ROLE_THINK_SCALE=1`. These assumptions require calibration against real usage; they are not recorded production user behavior.
 
 | Trigger | Default delay | Purpose |
 | --- | --- | --- |
-| First assigned session / refreshed session | 2–5 seconds | Navigation after login. Not a fresh login before every workflow. |
-| Style created | 15–45 seconds | Review style details. |
-| Techpack created | 20–60 seconds | Review uploaded documents. File-transfer time is additional. |
-| Sample created | 20–60 seconds | Sample information review. |
-| BOM created | 30–90 seconds | Review material requirements. |
-| Costing created | 20–60 seconds | Review prices and consumption. |
-| Purchase order created | 15–45 seconds | Review order information. |
-| Inventory discovered an eligible order | 5–20 seconds | Review receivable items before receiving. |
+| First assigned session / refreshed session | 0.5–2 seconds | Navigation after login. Not a fresh login before every workflow. |
+| Style created | 0.5–2 seconds | Review style details. |
+| Techpack created | 30–45 seconds | Review uploaded documents. File-transfer time is additional. |
+| Sample created | 0.5–2 seconds | Sample information review. |
+| BOM created | 0.5–2 seconds | Review material requirements. |
+| Costing created | 0.5–2 seconds | Review prices and consumption. |
+| Purchase order created | 0.5–2 seconds | Review order information. |
+| Inventory discovered an eligible order | 0.5–2 seconds | Review receivable items before receiving. |
 | No ready order / after workflow failure | 2 seconds | Poll/backoff interval; separate from human think time. |
 
-The six producer action pauses total 120–360 seconds per workflow, excluding login, API calls, uploads and approvals. Inventory adds 5–20 seconds before receipt, plus any queue wait. Think time affects end-to-end duration and achieved throughput; it is not included in individual HTTP request latency.
+The six producer action pauses total 32.5–55 seconds per workflow, excluding login, API calls, uploads and approvals. Inventory adds 0.5–2 seconds before receipt, plus any queue wait. Think time affects end-to-end duration and achieved throughput; it is not included in individual HTTP request latency.
 
-Override a range with `ROLE_THINK_<STEP>_MIN` and `ROLE_THINK_<STEP>_MAX`, using `LOGIN`, `STYLE`, `TECHPACK`, `SAMPLE`, `BOM`, `COSTING`, `PURCHASE` or `DISCOVER`. For example, `ROLE_THINK_BOM_MIN=20 ROLE_THINK_BOM_MAX=60`. `ROLE_THINK_SCALE=0.5` halves human pauses; the smoke command sets it to zero. Queue polling remains enabled.
+Override a range with `ROLE_THINK_<STEP>_MIN` and `ROLE_THINK_<STEP>_MAX`, using `LOGIN`, `STYLE`, `TECHPACK`, `SAMPLE`, `BOM`, `COSTING`, `PURCHASE` or `DISCOVER`. For example, `ROLE_THINK_BOM_MIN=0.5 ROLE_THINK_BOM_MAX=2`. `ROLE_THINK_SCALE=0.5` halves human pauses; the smoke command sets it to zero. Queue polling remains enabled.
 
 ## 5. Acceptance thresholds and interpretation
 
 | Gate | Default acceptance | Scope |
 | --- | --- | --- |
 | Regular API p95 | < 2 seconds | `traffic:application,workload:api`; includes work-order approval and supplier status. |
-| Regular API p99 | < 5 seconds | Same regular API group. |
+| Regular API p99 | < 2 seconds | Same regular API group. |
 | Techpack p95 | < 30 seconds | `traffic:application,workload:techpack`: upload URL request, each file transfer and techpack create request. |
 | Techpack p99 | < 45 seconds | Same techpack request group. |
 | Application HTTP failure rate | < 1% | All application requests, including techpack/upload traffic. |
@@ -152,7 +152,7 @@ Setup authentication and local coordinator calls are excluded from application a
 
 | Environment setting | Default |
 | --- | --- |
-| `ROLE_API_P95_MS` / `ROLE_API_P99_MS` | `2000` / `5000` |
+| `ROLE_API_P95_MS` / `ROLE_API_P99_MS` | `2000` / `2000` |
 | `ROLE_TECHPACK_P95_MS` / `ROLE_TECHPACK_P99_MS` | `30000` / `45000` |
 | `ROLE_HTTP_FAILURE_RATE` | `0.01` |
 | `ROLE_COMPLETION_RATE` | `0.99` |

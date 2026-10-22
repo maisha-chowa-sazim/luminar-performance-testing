@@ -3,6 +3,7 @@ import { check, sleep } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import { authenticateAccount } from './session-pool.js';
 import { requiredEnvValue, getApiUrl, tenantHeaders } from './http.js';
+import { configuredThinkRanges } from '../config/role-load.mjs';
 
 export const coordinationErrors = new Counter('coordination_errors');
 export const integrityErrors = new Counter('data_integrity_violations');
@@ -11,15 +12,9 @@ export const duplicateReceipts = new Counter('duplicate_successful_receipts');
 export const duplicateAttempts = new Counter('duplicate_receiving_attempts');
 export const operationDuration = new Trend('business_operation_duration', true);
 const sessions = {};
-const ranges = { login: [2, 5], style: [15, 45], techpack: [20, 60], sample: [20, 60],
-    bom: [30, 90], costing: [20, 60], purchase: [15, 45], discover: [5, 20] };
 
 export function thinkRanges(env) {
-    return Object.fromEntries(Object.entries(ranges).map(([step, defaults]) => {
-        const values = ['MIN', 'MAX'].map((bound, i) => Number(env[`ROLE_THINK_${step.toUpperCase()}_${bound}`] ?? defaults[i]));
-        if (!values.every(n => Number.isFinite(n) && n >= 0) || values[0] > values[1]) throw new Error(`Invalid think-time range for ${step}`);
-        return [step, values];
-    }));
+    return configuredThinkRanges(env);
 }
 
 export function think(step, config) {

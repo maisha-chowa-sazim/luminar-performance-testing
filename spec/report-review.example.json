@@ -1,0 +1,6 @@
+{
+  "objective": "Characterize Slice 1 at the selected user level and identify improvements for developers.",
+  "testType": "Concurrent-role load",
+  "thresholdAgreement": "Pending stakeholder review; use the gates recorded in summary.json.",
+  "findings": []
+}

@@ -1,8 +1,8 @@
-import { createPreCosting, getCreatedPreCostingId } from '../flows/pre-costing.js';
-import { createStyle, getCreatedStyleId } from '../flows/style.js';
-import { FUNCTIONAL_THRESHOLDS } from '../config/functional-thresholds.js';
+import { createPreCosting, getCreatedPreCostingId } from '../../flows/pre-costing.js';
+import { createStyle, getCreatedStyleId } from '../../flows/style.js';
+import { FUNCTIONAL_THRESHOLDS } from '../../config/functional-thresholds.js';
 
-export { setupAuth as setup } from '../helpers/auth.js';
+export { setupAuth as setup } from '../../helpers/auth.js';
 
 export const options = {
     vus: 1,

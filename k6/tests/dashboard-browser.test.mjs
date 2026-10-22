@@ -100,7 +100,8 @@ export function inventory(){ request();if(count++===7)completed.add(1);sleep(1);
         assert.equal(await finished, 0, output);
         const run = (await readdir('k6/results')).find(value => value.includes(name));
         assert.ok(run);
-        assert.match(await readFile(`k6/results/${run}/k6-dashboard.html`, 'utf8'), /k6/i);
+        assert.match(await readFile(`k6/results/${run}/k6-dashboard.html`, 'utf8'), /QA performance assessment/);
+        assert.match(await readFile(`k6/results/${run}/k6-dashboard-native.html`, 'utf8'), /k6/i);
     } finally {
         socket?.close(); chrome.kill(); runner.kill(); api.closeAllConnections();
         await new Promise(resolve => api.close(resolve));

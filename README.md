@@ -13,11 +13,11 @@ npm run test:load:arrival
 npm run test:dashboard -- load-roles
 # Export dashboard HTML without opening a live server (CI):
 K6_WEB_DASHBOARD_PORT=-1 npm run test:load:5
-# Any existing scenario, with automatic PDF reporting:
+# Any existing scenario, with automatic HTML reporting:
 npm run test:performance -- full-journey
 ```
 
-Each run through this runner creates a stakeholder PDF, HTML report, run metadata and available k6 summary JSON under `k6/results/`. Failed runs keep their failure exit code and report status. Direct `k6 run` commands do not generate PDFs.
+Each run through this runner creates an HTML report, run metadata and available k6 summary JSON under `k6/results/`. Failed runs keep their failure exit code and report status.
 Load scenarios automatically open the k6 live dashboard at `http://localhost:5665` and save `k6-dashboard.html` in that run's results directory. Close the dashboard tab to let k6 finish and the runner complete its reports. Set `K6_WEB_DASHBOARD=false` to disable visualization, or `K6_WEB_DASHBOARD_OPEN=false` to open the URL manually.
 
 The scenarios create persistent records and upload files. Use a disposable seeded QA environment, validate fixtures with smoke tests, and restore data between comparable runs. Role load levels use distinct business accounts and shared supporting approval accounts; the arrival-rate test reuses the legacy session pool. Acceptance targets remain provisional.

@@ -7,4 +7,4 @@ if (!directory) throw new Error('Usage: npm run report:regenerate -- k6/results/
 const root = path.resolve(directory);
 const [summary, metadata] = await Promise.all(['summary.json', 'metadata.json'].map(async name => JSON.parse(await readFile(path.join(root, name), 'utf8'))));
 const status = await writeReports(root, summary, metadata);
-console.log(`${status}: regenerated saved HTML/PDF reports in ${root}. No load test executed.`);
+console.log(`${status}: regenerated saved HTML reports in ${root}. No load test executed.`);

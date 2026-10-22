@@ -1,6 +1,16 @@
 // Pure configuration: shared by the Node runner, k6, and offline tests.
 export const ROLE_ALLOCATIONS = { 2: [1, 1], 5: [4, 1], 10: [8, 2], 20: [16, 4], 50: [40, 10] };
 
+export function configuredThinkRanges(env) {
+    const ranges = { login: [0.5, 2], style: [0.5, 2], techpack: [30, 45], sample: [0.5, 2],
+        bom: [0.5, 2], costing: [0.5, 2], purchase: [0.5, 2], discover: [0.5, 2] };
+    return Object.fromEntries(Object.entries(ranges).map(([step, defaults]) => {
+        const values = ['MIN', 'MAX'].map((bound, i) => Number(env[`ROLE_THINK_${step.toUpperCase()}_${bound}`] ?? defaults[i]));
+        if (!values.every(n => Number.isFinite(n) && n >= 0) || values[0] > values[1]) throw new Error(`Invalid think-time range for ${step}`);
+        return [step, values];
+    }));
+}
+
 export function seconds(value) {
     if (!/^(?:\d+(?:\.\d+)?(?:ms|s|m|h))+$/.test(value)) throw new Error(`Invalid duration: ${value}`);
     return [...value.matchAll(/(\d+(?:\.\d+)?)(ms|s|m|h)/g)]
@@ -33,7 +43,7 @@ export function roleConfig(env) {
         grace: duration('ROLE_GRACE', '10m', true),
         drain: duration('ROLE_DRAIN', '5m', true),
         apiP95: number('ROLE_API_P95_MS', 2000, 1),
-        apiP99: number('ROLE_API_P99_MS', 5000, 1),
+        apiP99: number('ROLE_API_P99_MS', 2000, 1),
         techPackP95: number('ROLE_TECHPACK_P95_MS', 30000, 1),
         techPackP99: number('ROLE_TECHPACK_P99_MS', 45000, 1),
         httpFailure: number('ROLE_HTTP_FAILURE_RATE', 0.01, 0, 1),
@@ -79,6 +89,14 @@ export function roleOptions(config) {
                 tags: { traffic: 'application', workload: 'api', role: 'inventory' } },
         },
         thresholds: {
+            // Collect scoped throughput for reports without adding acceptance gates.
+            'http_reqs{traffic:application}': [],
+            'http_reqs{traffic:application,workload:api}': [],
+            'http_reqs{traffic:application,workload:techpack}': [],
+            ...Object.fromEntries([0, 400, 401, 403, 404, 409, 422, 429, 500, 502, 503, 504]
+                .map(status => [`http_reqs{traffic:application,status:${status}}`, []])),
+            'http_req_duration{traffic:application,expected_response:true}': [],
+            'http_req_duration{traffic:application,expected_response:false}': [],
             ...Object.fromEntries(OPERATIONS.flatMap(name => ['http_req_duration', 'http_req_failed', 'http_reqs']
                 .map(metric => [`${metric}{name:${name}}`, []]))),
             'http_req_duration{traffic:application}': [],

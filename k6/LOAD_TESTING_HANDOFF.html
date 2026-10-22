@@ -1,465 +1,112 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport"
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport"
             content="width=device-width,initial-scale=1"><title>Luminar Slice 1
-            | Developer load-testing
-            handoff</title><style>*{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#172b46;font:14px/1.7 system-ui,-apple-system,sans-serif}main{max-width:1200px;margin:auto;padding:32px}header{padding:32px;border-radius:16px;background:#10223b;color:white}header p{color:#cbd5e1}.eyebrow{color:#7dd3fc;font-size:11px;letter-spacing:2px}h1{font-size:32px;line-height:1.2}h2{margin:40px 0 16px;font-size:23px;border-top:1px solid #cbd5e1;padding-top:24px}h3{font-size:17px;margin-top:28px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}.card,article,.chart{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:22px}.card strong{display:block;font-size:28px}.card span,.muted{color:#64748b;font-size:12px}article{padding:30px}.table-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;margin:18px 0}table{border-collapse:collapse;width:100%;font-size:12px;text-align:left}th{background:#eaf1f8;font-size:11px}td,th{padding:12px;border-bottom:1px solid #e2e8f0;vertical-align:top}td:first-child{min-width:175px;font-weight:600}tr:last-child td{border:0}code{font:12px/1.5 ui-monospace,monospace;background:#edf2f7;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{padding:18px;background:#edf2f7;overflow-x:auto}pre code{padding:0}svg{width:100%;height:auto;display:block}.diagram{padding:18px;border:1px solid #dbeafe;border-radius:10px}a{color:#2563eb}header a{color:#bae6fd}nav{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}nav a{font-size:12px}footer{padding:24px 0;color:#64748b;font-size:12px}@media(max-width:750px){main{padding:16px}article{padding:18px}.cards{grid-template-columns:repeat(2,1fr)}h1{font-size:26px}}@media print{body{background:white}main{padding:0}.cards,.diagram,tr{break-inside:avoid}nav{display:none}}</style></head><body><main><header><div
-                    class="eyebrow">ENGINEERING HANDOFF · IMPLEMENTATION
-                    SNAPSHOT</div><h1>Luminar Slice 1<br>How load testing
-                    works</h1><p>Independent concurrent roles, verified
-                    receiving, realistic pacing and separate upload
-                    targets.</p><a href="LOAD_TESTING_HANDOFF.pdf">Download
-                    PDF</a> · <a href="LOAD_TESTING_HANDOFF.md">Markdown
-                    source</a></header><section class="chart"><h3>Role
-                    allocation by load level</h3><p class="muted">Blue:
-                    Merchandiser · Green: Inventory. Shared supporting approval
-                    session runs within business VUs.</p><svg
-                    viewBox="0 0 940 200" role="img"
-                    aria-label="Implementation flow"><defs><marker
-                            id="chart-arrow" markerWidth="8" markerHeight="8"
-                            refX="7" refY="4" orient="auto"><path
-                                d="M0 0L8 4L0 8Z"
-                                fill="#64748b" /></marker></defs><text x="0"
-                        y="27" fill="#475569" font-size="13">5 VUs</text><rect
-                        x="100" y="6" width="52" height="28" rx="3"
-                        fill="#2563eb" /><rect x="152" y="6" width="13"
-                        height="28" rx="3" fill="#0d9488" /><text x="175" y="27"
-                        fill="#475569" font-size="13">4 Merchandiser + 1
-                        Inventory</text><text x="0" y="72" fill="#475569"
-                        font-size="13">10 VUs</text><rect x="100" y="51"
-                        width="104" height="28" rx="3" fill="#2563eb" /><rect
-                        x="204" y="51" width="26" height="28" rx="3"
-                        fill="#0d9488" /><text x="240" y="72" fill="#475569"
-                        font-size="13">8 Merchandiser + 2 Inventory</text><text
-                        x="0" y="117" fill="#475569" font-size="13">20
-                        VUs</text><rect x="100" y="96" width="208" height="28"
-                        rx="3" fill="#2563eb" /><rect x="308" y="96" width="52"
-                        height="28" rx="3" fill="#0d9488" /><text x="370"
-                        y="117" fill="#475569" font-size="13">16 Merchandiser +
-                        4 Inventory</text><text x="0" y="162" fill="#475569"
-                        font-size="13">50 VUs</text><rect x="100" y="141"
-                        width="520" height="28" rx="3" fill="#2563eb" /><rect
-                        x="620" y="141" width="130" height="28" rx="3"
-                        fill="#0d9488" /><text x="760" y="162" fill="#475569"
-                        font-size="13">40 Merchandiser + 10
-                        Inventory</text></svg></section><article><nav><a
-                        href="#section-0">1. Scope and design decisions</a><a
-                        href="#section-1">2. Architecture and business
-                        journey</a><a href="#section-2">3. Workload profiles and
-                        execution time</a><a href="#section-3">4. Think time and
-                        realistic pacing</a><a href="#section-4">5. Acceptance
-                        thresholds and interpretation</a></nav>
-                <p>Prepared for the development team · 16 October 2026</p>
-                <p>This report describes the current local implementation,
-                    including changes after commit <code>0f360be</code>. It is
-                    an implementation handoff, not a capacity or release
-                    sign-off. No load test was executed to prepare it.</p>
-                <h2 id="section-0">1. Scope and design decisions</h2>
-                <p>The primary load profile runs Merchandiser and Inventory
-                    users independently and concurrently. Merchandisers create
-                    linked business records; Inventory users receive eligible
-                    work orders produced by the same run. Each business VU has a
-                    distinct assigned account and reuses its authenticated
-                    session.</p>
+            | Load-testing
+            overview</title><style>*{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#172b46;font:14px/1.7 system-ui,-apple-system,sans-serif}main{max-width:1200px;margin:auto;padding:32px}header{padding:32px;border-radius:16px;background:#10223b;color:white}header p{color:#cbd5e1}.eyebrow{color:#7dd3fc;font-size:11px;letter-spacing:2px}h1{font-size:32px;line-height:1.2}h2{margin:40px 0 16px;font-size:23px;border-top:1px solid #cbd5e1;padding-top:24px}h3{font-size:17px;margin-top:28px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0}.card,article,.chart{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:22px}.card strong{display:block;font-size:28px}.card span,.muted{color:#64748b;font-size:12px}article{padding:30px}.table-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:8px;margin:18px 0}table{border-collapse:collapse;width:100%;font-size:12px;text-align:left}th{background:#eaf1f8;font-size:11px}td,th{padding:12px;border-bottom:1px solid #e2e8f0;vertical-align:top}td:first-child{min-width:175px;font-weight:600}tr:last-child td{border:0}code{font:12px/1.5 ui-monospace,monospace;background:#edf2f7;padding:2px 4px;border-radius:3px;overflow-wrap:anywhere}pre{padding:18px;background:#edf2f7;overflow-x:auto}pre code{padding:0}svg{width:100%;height:auto;display:block}.diagram{padding:18px;border:1px solid #dbeafe;border-radius:10px}a{color:#2563eb}header a{color:#bae6fd}nav{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px}nav a{font-size:12px}footer{padding:24px 0;color:#64748b;font-size:12px}@media(max-width:750px){main{padding:16px}article{padding:18px}.cards{grid-template-columns:repeat(2,1fr)}h1{font-size:26px}}@media print{body{background:white}main{padding:0}.cards,.diagram,tr{break-inside:avoid}nav{display:none}}</style></head><body><main>
+            <header><h1>Luminar Slice 1<br>Load-testing
+                    overview</h1><p>Merchandiser and Inventory users run
+                    independently. Each uses an assigned account and a reusable
+                    session.</p></header>
+            <article style="margin-top:22px">
+                <h2 style="margin-top:0;border-top:0;padding-top:0">Business
+                    flow</h2>
+                <p><strong>Merchandiser:</strong> Style → Techpack and file
+                    uploads → Sample → BOM → Pre-costing → Purchase order → Work
+                    order.</p>
+                <p><strong>Senior Merchandiser:</strong> Approve the work order
+                    → Set <code>SENT_TO_SUPPLIER</code> → Confirm readiness.</p>
+                <p><strong>Inventory:</strong> Claim a ready order → Receive all
+                    items through one GRN → Verify quantities, work-order status
+                    and receipt uniqueness.</p>
+                <p class="muted">Only work-order approval is included. Other
+                    approvals, QC and stock-entry creation are excluded.</p>
+                <h2>Concurrency and handoff</h2>
+                <p>Two <code>ramping-vus</code> scenarios run concurrently. A
+                    local coordinator assigns each ready order to one Inventory
+                    VU and saves its claim in a run ledger. Failed or uncertain
+                    receipt writes are recorded and never automatically retried
+                    or reassigned.</p>
+                <div class="chart" style="margin:18px 0"><h3
+                        style="margin-top:0">Role allocation by load
+                        level</h3><p class="muted">Blue: Merchandiser · Green:
+                        Inventory</p><svg viewBox="0 0 940 200" role="img"
+                        aria-label="Stacked bars showing Merchandiser and Inventory VU allocations for 5, 10, 20 and 50 users"><text
+                            x="0" y="27" fill="#475569" font-size="13">5
+                            VUs</text><rect x="100" y="6" width="52" height="28"
+                            rx="3" fill="#2563eb" /><rect x="152" y="6"
+                            width="13" height="28" rx="3" fill="#0d9488" /><text
+                            x="175" y="27" fill="#475569" font-size="13">4
+                            Merchandiser + 1 Inventory</text><text x="0" y="72"
+                            fill="#475569" font-size="13">10 VUs</text><rect
+                            x="100" y="51" width="104" height="28" rx="3"
+                            fill="#2563eb" /><rect x="204" y="51" width="26"
+                            height="28" rx="3" fill="#0d9488" /><text x="240"
+                            y="72" fill="#475569" font-size="13">8 Merchandiser
+                            + 2 Inventory</text><text x="0" y="117"
+                            fill="#475569" font-size="13">20 VUs</text><rect
+                            x="100" y="96" width="208" height="28" rx="3"
+                            fill="#2563eb" /><rect x="308" y="96" width="52"
+                            height="28" rx="3" fill="#0d9488" /><text x="370"
+                            y="117" fill="#475569" font-size="13">16
+                            Merchandiser + 4 Inventory</text><text x="0" y="162"
+                            fill="#475569" font-size="13">50 VUs</text><rect
+                            x="100" y="141" width="520" height="28" rx="3"
+                            fill="#2563eb" /><rect x="620" y="141" width="130"
+                            height="28" rx="3" fill="#0d9488" /><text x="760"
+                            y="162" fill="#475569" font-size="13">40
+                            Merchandiser + 10 Inventory</text></svg></div>
+
+                <p>Normal profiles use a 2-minute ramp-up, 15-minute steady
+                    phase and 2-minute producer ramp-down. Inventory remains
+                    available for in-flight work and drain; its scheduled stages
+                    total 36 minutes, plus setup and any graceful completion.
+                    The shared approval session runs inside Merchandiser
+                    VUs.</p>
+                <h2>Think time <span
+                        style="font-size:14px;font-weight:400;color:#64748b">—
+                        simulated user pauses</span></h2>
+                <p>Think time is the pause between user actions, such as reading
+                    a page or reviewing an order. We use random pauses to mimic
+                    real users and avoid sending requests continuously at
+                    machine speed. API response and file-upload times are
+                    additional.</p>
+                <div class="table-wrap"><table><thead><tr><th>After
+                                    action</th><th>Random
+                                    pause</th></tr></thead><tbody>
+                            <tr><td>First session / session refresh</td><td>0.5–2 seconds</td></tr>
+                            <tr><td>Style creation</td><td>0.5–2 seconds</td></tr>
+                            <tr><td>Techpack creation</td><td>30–45 seconds</td></tr>
+                            <tr><td>Sample creation</td><td>0.5–2 seconds</td></tr>
+                            <tr><td>BOM creation</td><td>0.5–2 seconds</td></tr>
+                            <tr><td>Costing creation</td><td>0.5–2 seconds</td></tr>
+                            <tr><td>Purchase-order creation</td><td>0.5–2 seconds</td></tr>
+                            <tr><td>Inventory discovers an order</td><td>0.5–2 seconds</td></tr>
+                        </tbody></table></div>
+                <p><code>ROLE_THINK_SCALE</code> scales these pauses (default 1). Login navigation pauses are separate from authentication pacing and rate-limit cooldowns. Smoke
+                    disables them, limits each producer to one workflow and
+                    stops on workflow error. Empty Inventory polls wait 2
+                    seconds.</p>
+                <h2>Acceptance targets</h2>
                 <div
-                    class="table-wrap"><table><thead><tr><th>Decision</th><th>Implementation
-                                    and
-                                    reason</th></tr></thead><tbody><tr><td>Independent
-                                    concurrent roles</td><td>Two
-                                    <code>ramping-vus</code> scenarios model
-                                    producers and consumers progressing at
-                                    different speeds.</td></tr><tr><td>Maximum
-                                    50 business VUs</td><td>The configured role
-                                    counts must sum to the requested total,
-                                    which cannot exceed
-                                    50.</td></tr><tr><td>Work-order approval
-                                    only</td><td>Senior Merchandiser approves
-                                    each work order and sends it to the supplier
-                                    before receiving. BOM, costing and
-                                    purchase-order approvals/submissions are
-                                    excluded.</td></tr><tr><td>Receiving-only
-                                    Inventory scope</td><td>Create and verify a
-                                    GRN, confirm received quantities/status and
-                                    one receipt. QC and stock-entry creation are
-                                    excluded.</td></tr><tr><td>Real upload
-                                    traffic</td><td>Techpack creation requests
-                                    upload URLs, transfers the fixture files and
-                                    creates the techpack
-                                    record.</td></tr><tr><td>Separate latency
-                                    budgets</td><td>Regular API traffic and
-                                    techpack requests have different tagged
-                                    acceptance
-                                    thresholds.</td></tr><tr><td>Durable
-                                    handoff</td><td>A local Node coordinator
-                                    serializes claims and saves a per-run
-                                    ledger; isolated k6 VUs do not share a
-                                    mutable JavaScript
-                                    queue.</td></tr><tr><td>No blind write
-                                    retries</td><td>A timeout can hide a
-                                    committed write. Failed or ambiguous
-                                    receipts remain recorded for
-                                    reconciliation.</td></tr></tbody></table></div>
-                <p>This is a concurrent-user workload: achieved request
-                    throughput depends on application latency, think time and
-                    available work. The separate legacy arrival-rate scenario is
-                    not the primary role profile described here.</p>
-                <h2 id="section-1">2. Architecture and business journey</h2>
-                <div class="diagram"><svg viewBox="0 0 940 340" role="img"
-                        aria-label="Implementation flow"><defs><marker
-                                id="architecture-arrow" markerWidth="8"
-                                markerHeight="8" refX="7" refY="4"
-                                orient="auto"><path d="M0 0L8 4L0 8Z"
-                                    fill="#64748b" /></marker></defs><rect
-                            x="350" y="10" width="240" height="50" rx="9"
-                            fill="#eff6ff" stroke="#93c5fd" /><text x="470"
-                            y="39" text-anchor="middle" font-size="13"
-                            fill="#17304e">Node runner and reporting</text><rect
-                            x="35" y="115" width="240" height="50" rx="9"
-                            fill="#eff6ff" stroke="#93c5fd" /><text x="155"
-                            y="144" text-anchor="middle" font-size="13"
-                            fill="#17304e">Merchandiser VUs</text><rect x="350"
-                            y="115" width="240" height="50" rx="9"
-                            fill="#eff6ff" stroke="#93c5fd" /><text x="470"
-                            y="144" text-anchor="middle" font-size="13"
-                            fill="#17304e">Local claim coordinator</text><rect
-                            x="665" y="115" width="240" height="50" rx="9"
-                            fill="#eff6ff" stroke="#93c5fd" /><text x="785"
-                            y="144" text-anchor="middle" font-size="13"
-                            fill="#17304e">Inventory VUs</text><rect x="350"
-                            y="265" width="240" height="50" rx="9"
-                            fill="#eff6ff" stroke="#93c5fd" /><text x="470"
-                            y="294" text-anchor="middle" font-size="13"
-                            fill="#17304e">Luminar API / upload
-                            storage</text><path d="M410 60 L155 115"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#architecture-arrow)"
-                            fill="none" /><path d="M470 60 L470 115"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#architecture-arrow)"
-                            fill="none" /><path d="M530 60 L785 115"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#architecture-arrow)"
-                            fill="none" /><path d="M275 140 L350 140"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#architecture-arrow)"
-                            fill="none" /><path d="M590 140 L665 140"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#architecture-arrow)"
-                            fill="none" /><path d="M155 165 L410 265"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#architecture-arrow)"
-                            fill="none" /><path d="M785 165 L530 265"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#architecture-arrow)"
-                            fill="none" /><text x="470" y="200"
-                            text-anchor="middle" font-size="12"
-                            fill="#64748b">Coordinator persists
-                            handoff-ledger.json before
-                            acknowledgment</text></svg></div>
-                <h3 id="detail-merchandiser-workflow">Merchandiser workflow</h3>
-                <div
-                    class="table-wrap"><table><thead><tr><th>Step</th><th>Behavior
-                                    and
-                                    dependency</th></tr></thead><tbody><tr><td>1.
-                                    Session</td><td>Use the assigned
-                                    Merchandiser session; refresh at a safe
-                                    boundary when required.</td></tr><tr><td>2.
-                                    Style</td><td>Create a unique style and
-                                    retain its ID.</td></tr><tr><td>3.
-                                    Techpack</td><td>Request upload URLs, upload
-                                    actual fixture files, then create the
-                                    techpack for that style.</td></tr><tr><td>4.
-                                    Sample</td><td>Create a sample and verify
-                                    its style relationship.</td></tr><tr><td>5.
-                                    BOM</td><td>Read the created style/combo,
-                                    create a BOM and verify the linked
-                                    style.</td></tr><tr><td>6.
-                                    Pre-costing</td><td>Create costing for the
-                                    style; no approval
-                                    submission.</td></tr><tr><td>7. Purchase
-                                    order</td><td>Create the PO for the same
-                                    style/combo and verify its
-                                    relationship.</td></tr><tr><td>8. Work
-                                    order</td><td>Read the created PO; derive
-                                    matching garment sizes, color and
-                                    quantities; reserve a new number and create
-                                    the work order.</td></tr><tr><td>9. Required
-                                    approval</td><td>Use the existing Senior
-                                    Merchandiser session to approve the work
-                                    order, then set
-                                    <code>SENT_TO_SUPPLIER</code>.</td></tr><tr><td>10.
-                                    Handoff</td><td>Read back status and
-                                    style/PO relationships. Only then mark the
-                                    registered order ready for
-                                    Inventory.</td></tr></tbody></table></div>
-                <p>Approval is a supporting action within Merchandiser VUs.
-                    There is no extra approval scenario and no executive login.
-                    Multiple Merchandiser VUs can use the shared Senior
-                    Merchandiser account; its contention and authorization
-                    limits can affect results.</p>
-                <h3 id="detail-inventory-workflow">Inventory workflow</h3>
-                <div
-                    class="table-wrap"><table><thead><tr><th>Step</th><th>Required
-                                    verification</th></tr></thead><tbody><tr><td>1.
-                                    Claim</td><td>Atomically claim one ready
-                                    order from the current run. If none exists,
-                                    wait and poll again.</td></tr><tr><td>2.
-                                    Read order</td><td>Confirm the registered
-                                    order, style and purchase relationships;
-                                    require
-                                    <code>SENT_TO_SUPPLIER</code>.</td></tr><tr><td>3.
-                                    Validate items</td><td>Every variant must
-                                    have a positive ordered quantity, a
-                                    measurement unit and zero previously
-                                    received quantity.</td></tr><tr><td>4.
-                                    Duplicate guard</td><td>List GRNs for the
-                                    work order and require zero existing
-                                    receipts.</td></tr><tr><td>5.
-                                    Receive</td><td>Send one GRN containing the
-                                    full ordered quantities for every
-                                    variant.</td></tr><tr><td>6. Verify
-                                    GRN</td><td>Validate the returned ID, order
-                                    relationship, item identities, quantities
-                                    and units; GET the GRN and validate
-                                    again.</td></tr><tr><td>7. Verify
-                                    order</td><td>Poll safe GETs until the work
-                                    order is <code>RECEIVED</code>, then check
-                                    each variant&#39;s received
-                                    quantity.</td></tr><tr><td>8.
-                                    Reconcile</td><td>Require exactly one GRN
-                                    matching the created receipt; mark the claim
-                                    received in the
-                                    ledger.</td></tr></tbody></table></div>
-                <p>A completed Inventory iteration without a claim is an empty
-                    poll, not a completed receipt. Receiving verification proves
-                    the receipt and work-order updates; it makes no claim about
-                    QC or stock-entry creation.</p>
-                <h3 id="detail-claim-lifecycle">Claim lifecycle</h3>
-                <div class="diagram"><svg viewBox="0 0 940 95" role="img"
-                        aria-label="Implementation flow"><defs><marker
-                                id="lifecycle-arrow" markerWidth="8"
-                                markerHeight="8" refX="7" refY="4"
-                                orient="auto"><path d="M0 0L8 4L0 8Z"
-                                    fill="#64748b" /></marker></defs><rect
-                            x="10" y="10" width="200" height="50" rx="9"
-                            fill="#eff6ff" stroke="#93c5fd" /><text x="110"
-                            y="39" text-anchor="middle" font-size="13"
-                            fill="#17304e">Created</text><path
-                            d="M210 35 L240 35" stroke="#64748b"
-                            stroke-width="2" marker-end="url(#lifecycle-arrow)"
-                            fill="none" /><rect x="245" y="10" width="200"
-                            height="50" rx="9" fill="#eff6ff"
-                            stroke="#93c5fd" /><text x="345" y="39"
-                            text-anchor="middle" font-size="13"
-                            fill="#17304e">Ready</text><path d="M445 35 L475 35"
-                            stroke="#64748b" stroke-width="2"
-                            marker-end="url(#lifecycle-arrow)"
-                            fill="none" /><rect x="480" y="10" width="200"
-                            height="50" rx="9" fill="#eff6ff"
-                            stroke="#93c5fd" /><text x="580" y="39"
-                            text-anchor="middle" font-size="13"
-                            fill="#17304e">Claimed</text><path
-                            d="M680 35 L710 35" stroke="#64748b"
-                            stroke-width="2" marker-end="url(#lifecycle-arrow)"
-                            fill="none" /><rect x="715" y="10" width="200"
-                            height="50" rx="9" fill="#eff6ff"
-                            stroke="#93c5fd" /><text x="815" y="39"
-                            text-anchor="middle" font-size="13"
-                            fill="#17304e">Received</text></svg><p
-                        class="muted">Ready requires work-order approval and
-                        SENT_TO_SUPPLIER. Failures retain claims for
-                        reconciliation.</p></div>
-                <p>The coordinator listens on loopback and uses a random per-run
-                    key. Each transition persists JSON through a temporary file
-                    and atomic rename before acknowledgment. Claims do not
-                    expire or return to the queue automatically. This prevents
-                    local concurrent reassignment; it is not distributed
-                    exactly-once delivery or backend idempotency. Process crash
-                    recovery/resuming a prior queue is not implemented.</p>
-                <h2 id="section-2">3. Workload profiles and execution time</h2>
-                <div
-                    class="table-wrap"><table><thead><tr><th>Command</th><th>Merchandiser</th><th>Inventory</th><th>Total</th><th>Intended
-                                    use</th></tr></thead><tbody><tr><td><code>npm
-                                        run
-                                        test:roles:smoke</code></td><td>1</td><td>1</td><td>2</td><td>One
-                                    producer workflow; validate integration
-                                    quickly.</td></tr><tr><td><code>npm run
-                                        test:loads:5</code></td><td>4</td><td>1</td><td>5</td><td>Baseline.</td></tr><tr><td><code>npm
-                                        run
-                                        test:loads:10</code></td><td>8</td><td>2</td><td>10</td><td>Normal
-                                    concurrent-user
-                                    load.</td></tr><tr><td><code>npm run
-                                        test:loads:20</code></td><td>16</td><td>4</td><td>20</td><td>Increased
-                                    concurrency.</td></tr><tr><td><code>npm run
-                                        test:loads:50</code></td><td>40</td><td>10</td><td>50</td><td>Maximum
-                                    supported role
-                                    load.</td></tr></tbody></table></div>
-                <div class="table-wrap"><table><thead><tr><th>Timing
-                                    setting</th><th>Smoke command</th><th>Normal
-                                    5/10/20/50
-                                    defaults</th></tr></thead><tbody><tr><td>Ramp
-                                    up</td><td>1 second</td><td>2
-                                    minutes</td></tr><tr><td>Steady
-                                    phase</td><td>30 seconds</td><td>15
-                                    minutes</td></tr><tr><td>Ramp down</td><td>1
-                                    second</td><td>2
-                                    minutes</td></tr><tr><td>Producer completion
-                                    grace</td><td>2 minutes</td><td>10
-                                    minutes</td></tr><tr><td>Extra Inventory
-                                    drain</td><td>30 seconds</td><td>5
-                                    minutes</td></tr><tr><td>Scheduled
-                                    Merchandiser stages</td><td>32
-                                    seconds</td><td>19
-                                    minutes</td></tr><tr><td>Scheduled Inventory
-                                    stages</td><td>3 minutes 3
-                                    seconds</td><td>36
-                                    minutes</td></tr><tr><td>Workflows per
-                                    producer VU</td><td>Maximum 1</td><td>Repeat
-                                    while the producer window is
-                                    open.</td></tr><tr><td>Human think-time
-                                    scale</td><td>0: disabled</td><td>1: full
-                                    ranges below.</td></tr><tr><td>Stop on
-                                    workflow
-                                    error</td><td>Enabled</td><td>Continue
-                                    recording failures unless explicitly
-                                    enabled.</td></tr></tbody></table></div>
-                <p>Inventory stays at its allocated concurrency during producer
-                    completion grace and drain, then ramps down. Setup, graceful
-                    completion, teardown and an open dashboard connection can
-                    extend wall time. The smoke command is not expected to end
-                    after its 30-second steady phase.</p>
-                <p>General <code>npm run test:roles</code> defaults to 10 VUs. A
-                    manually configured total of 2 outside the smoke command has
-                    a 10-minute steady default.
-                    <code>ROLE_MERCHANDISER_VUS</code> and
-                    <code>ROLE_INVENTORY_VUS</code> can override the allocation,
-                    provided their integer sum matches
-                    <code>ROLE_TOTAL_VUS</code> and the combined cap remains
-                    50.</p>
-                <h2 id="section-3">4. Think time and realistic pacing</h2>
-                <p>After business actions, the scenario draws a uniform random
-                    delay within each range and multiplies it by
-                    <code>ROLE_THINK_SCALE</code>. This spreads requests and
-                    represents time spent reviewing or entering information.
-                    These assumptions require calibration against real usage;
-                    they are not recorded production user behavior.</p>
-                <div
-                    class="table-wrap"><table><thead><tr><th>Trigger</th><th>Default
-                                    delay</th><th>Purpose</th></tr></thead><tbody><tr><td>First
-                                    assigned session / refreshed
-                                    session</td><td>2–5
-                                    seconds</td><td>Navigation after login. Not
-                                    a fresh login before every
-                                    workflow.</td></tr><tr><td>Style
-                                    created</td><td>15–45 seconds</td><td>Review
-                                    style details.</td></tr><tr><td>Techpack
-                                    created</td><td>20–60 seconds</td><td>Review
-                                    uploaded documents. File-transfer time is
-                                    additional.</td></tr><tr><td>Sample
-                                    created</td><td>20–60 seconds</td><td>Sample
-                                    information review.</td></tr><tr><td>BOM
-                                    created</td><td>30–90 seconds</td><td>Review
-                                    material
-                                    requirements.</td></tr><tr><td>Costing
-                                    created</td><td>20–60 seconds</td><td>Review
-                                    prices and
-                                    consumption.</td></tr><tr><td>Purchase order
-                                    created</td><td>15–45 seconds</td><td>Review
-                                    order
-                                    information.</td></tr><tr><td>Inventory
-                                    discovered an eligible order</td><td>5–20
-                                    seconds</td><td>Review receivable items
-                                    before receiving.</td></tr><tr><td>No ready
-                                    order / after workflow failure</td><td>2
-                                    seconds</td><td>Poll/backoff interval;
-                                    separate from human think
-                                    time.</td></tr></tbody></table></div>
-                <p>The six producer action pauses total 120–360 seconds per
-                    workflow, excluding login, API calls, uploads and approvals.
-                    Inventory adds 5–20 seconds before receipt, plus any queue
-                    wait. Think time affects end-to-end duration and achieved
-                    throughput; it is not included in individual HTTP request
-                    latency.</p>
-                <p>Override a range with
-                    <code>ROLE_THINK_&lt;STEP&gt;_MIN</code> and
-                    <code>ROLE_THINK_&lt;STEP&gt;_MAX</code>, using
-                    <code>LOGIN</code>, <code>STYLE</code>,
-                    <code>TECHPACK</code>, <code>SAMPLE</code>,
-                    <code>BOM</code>, <code>COSTING</code>,
-                    <code>PURCHASE</code> or <code>DISCOVER</code>. For example,
-                    <code>ROLE_THINK_BOM_MIN=20 ROLE_THINK_BOM_MAX=60</code>.
-                    <code>ROLE_THINK_SCALE=0.5</code> halves human pauses; the
-                    smoke command sets it to zero. Queue polling remains
-                    enabled.</p>
-                <h2 id="section-4">5. Acceptance thresholds and
-                    interpretation</h2>
-                <div
-                    class="table-wrap"><table><thead><tr><th>Gate</th><th>Default
-                                    acceptance</th><th>Scope</th></tr></thead><tbody><tr><td>Regular
-                                    API p95</td><td>&lt; 2
-                                    seconds</td><td><code>traffic:application,workload:api</code>;
-                                    includes work-order approval and supplier
-                                    status.</td></tr><tr><td>Regular API
-                                    p99</td><td>&lt; 5 seconds</td><td>Same
-                                    regular API group.</td></tr><tr><td>Techpack
-                                    p95</td><td>&lt; 30
-                                    seconds</td><td><code>traffic:application,workload:techpack</code>:
-                                    upload URL request, each file transfer and
-                                    techpack create
-                                    request.</td></tr><tr><td>Techpack
-                                    p99</td><td>&lt; 45 seconds</td><td>Same
-                                    techpack request
-                                    group.</td></tr><tr><td>Application HTTP
-                                    failure rate</td><td>&lt; 1%</td><td>All
-                                    application requests, including
-                                    techpack/upload
-                                    traffic.</td></tr><tr><td>End-to-end
-                                    completion</td><td>≥ 99%</td><td>Verified
-                                    received workflows divided by every started
-                                    producer workflow.</td></tr><tr><td>Minimum
-                                    business activity</td><td>&gt; 0 attempts
-                                    and &gt; 0 verified receipts</td><td>An
-                                    empty/no-work run cannot
-                                    pass.</td></tr><tr><td>Quantity
-                                    violations</td><td>0</td><td>Recorded
-                                    receiving quantity
-                                    violations.</td></tr><tr><td>Data-integrity
-                                    violations</td><td>0</td><td>Relationship
-                                    and integrity
-                                    checks.</td></tr><tr><td>Duplicate
-                                    successful
-                                    receipts</td><td>0</td><td>Verified
-                                    duplicate GRNs.</td></tr><tr><td>Coordinator
-                                    errors</td><td>0</td><td>Handoff service
-                                    operations.</td></tr></tbody></table></div>
-                <p>These are provisional acceptance budgets, not agreed
-                    production SLOs. Percentiles are calculated over tagged
-                    request samples across the whole run; they are not
-                    per-endpoint gates or steady-state-only measures. A techpack
-                    request budget is not a budget for the combined multi-file
-                    workflow. Endpoint tables retain counts and timings to
-                    expose slow individual operations.</p>
-                <p>Setup authentication and local coordinator calls are excluded
-                    from application acceptance gates. Aggregate HTTP
-                    totals/rate include them; do not interpret total throughput
-                    as Luminar business throughput. Authentication failures
-                    still stop setup.</p>
-                <div class="table-wrap"><table><thead><tr><th>Environment
-                                    setting</th><th>Default</th></tr></thead><tbody><tr><td><code>ROLE_API_P95_MS</code>
-                                    /
-                                    <code>ROLE_API_P99_MS</code></td><td><code>2000</code>
-                                    /
-                                    <code>5000</code></td></tr><tr><td><code>ROLE_TECHPACK_P95_MS</code>
-                                    /
-                                    <code>ROLE_TECHPACK_P99_MS</code></td><td><code>30000</code>
-                                    /
-                                    <code>45000</code></td></tr><tr><td><code>ROLE_HTTP_FAILURE_RATE</code></td><td><code>0.01</code></td></tr><tr><td><code>ROLE_COMPLETION_RATE</code></td><td><code>0.99</code></td></tr><tr><td><code>ROLE_POLL_INTERVAL_SECONDS</code>
-                                    /
-                                    <code>ROLE_POLL_TIMEOUT_SECONDS</code></td><td><code>2</code>
-                                    /
-                                    <code>60</code></td></tr><tr><td><code>ROLE_SESSION_MAX_AGE_SECONDS</code></td><td><code>900</code></td></tr></tbody></table></div>
-                <p>Latency inputs and raw k6 trends use milliseconds; the
-                    redesigned report displays seconds. Report generation does
-                    not reevaluate historical results using new targets: each
-                    saved run retains its own thresholds.</p>
-                </article><footer>Prepared 16 October 2026
-                from local source code. No load test executed for this
-                document.</footer></main></body></html>
+                    class="table-wrap"><table><thead><tr><th>Metric</th><th>Target</th></tr></thead><tbody>
+                            <tr><td>Regular API response time</td><td>p95 &lt;
+                                    2s · p99 &lt; 2s</td></tr>
+                            <tr><td>Techpack requests, including file
+                                    uploads</td><td>p95 &lt; 30s · p99 &lt;
+                                    45s</td></tr>
+                            <tr><td>Application HTTP failures</td><td>&lt; 1%,
+                                    including uploads</td></tr>
+                            <tr><td>Verified end-to-end completion</td><td>≥ 99%
+                                    of all started workflows</td></tr>
+                            <tr><td>Quantity errors, integrity violations,
+                                    duplicate successful receipts and
+                                    coordinator errors</td><td>Zero</td></tr>
+                        </tbody></table></div>
+                <p class="muted">Targets are provisional and configurable.
+                    Latency gates apply to grouped request samples across the
+                    whole run, not total workflow duration. Setup authentication
+                    and local coordinator calls are excluded from application
+                    gates. A run also requires at least one workflow attempt and
+                    one verified receipt.</p>
+            </article><footer>Implementation overview · 16 October
+                2026</footer></main></body></html>

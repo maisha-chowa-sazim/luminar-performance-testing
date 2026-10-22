@@ -34,7 +34,7 @@ export function performanceOptions(users) {
             ...endpointMetrics,
             // Provisional acceptance targets: agree these with product owners.
             'http_req_failed{scenario:full_journey}': ['rate<0.01'],
-            'http_req_duration{scenario:full_journey,workload:api}': ['p(95)<2000', 'p(99)<5000'],
+            'http_req_duration{scenario:full_journey,workload:api}': ['p(95)<2000', 'p(99)<2000'],
             'http_req_duration{scenario:full_journey,workload:techpack}': ['p(95)<30000', 'p(99)<45000'],
             checks: ['rate>0.99'],
             journey_success: ['rate>0.99'],

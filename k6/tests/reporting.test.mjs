@@ -42,7 +42,7 @@ test('role load levels parse with expected allocations, steady phases, and compl
         assert.deepEqual(options.thresholds.e2e_success, ['rate>=0.99']);
     }
 });
-test('real k6 report pipeline produces PDF/HTML and preserves failed exit codes without network requests', async () => {
+test('real k6 report pipeline produces HTML and dashboard exports and preserves failed exit codes without network requests', async () => {
     for (const mode of ['pass', 'dashboard-flag', 'fail', 'setup-error']) {
         const passing = mode === 'pass' || mode === 'dashboard-flag';
         const dashboard = passing;
@@ -65,18 +65,24 @@ test('real k6 report pipeline produces PDF/HTML and preserves failed exit codes 
             const dirs = (await readdir('k6/results')).filter(d => d.includes(name));
             assert.equal(dirs.length, 1);
             const dir = `k6/results/${dirs[0]}`;
-            const pdf = await readFile(`${dir}/report.pdf`);
-            assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
-            assert.match(pdf.toString(), /%%EOF/);
+            assert.equal((await readdir(dir)).some(name => name.endsWith('.pdf')), false);
             const html = await readFile(`${dir}/report.html`, 'utf8');
+            assert.doesNotMatch(html, /report\.pdf|Download PDF/);
             assert.match(html, new RegExp(`<strong>${passing ? 'PASS' : mode === 'fail' ? 'FAIL' : 'INCOMPLETE'}</strong>`));
             if (dashboard) {
                 const dashboardHtml = await readFile(`${dir}/k6-dashboard.html`, 'utf8').catch(() => '');
-                assert.match(dashboardHtml, /k6/i, run.stdout + run.stderr);
+                assert.equal(dashboardHtml, html, run.stdout + run.stderr);
+                assert.match(await readFile(`${dir}/k6-dashboard-native.html`, 'utf8'), /k6/i);
             } else {
                 assert.equal((await readdir(dir)).includes('k6-dashboard.html'), false);
             }
-            if (mode !== 'setup-error') assert.match(html, /SYNTHETIC report plumbing only/);
+            if (mode !== 'setup-error') {
+                const savedSummary = JSON.parse(await readFile(`${dir}/summary.json`, 'utf8'));
+                const check = savedSummary.root_group.checks.find(value => value.name === 'SYNTHETIC report plumbing only');
+                assert.ok(check);
+                assert.equal(check.passes, passing ? 1 : 0);
+                assert.equal(check.fails, passing ? 0 : 1);
+            }
         } finally { await rm(scenario, { force: true }); }
     }
 });

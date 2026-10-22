@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
 import { spawn, spawnSync } from 'node:child_process';
-import { roleConfig, roleOptions, seconds } from '../config/role-load.mjs';
+import { roleConfig, roleOptions, seconds, configuredThinkRanges } from '../config/role-load.mjs';
 import { selectRoleAccounts } from '../helpers/role-accounts.mjs';
 import { startRoleCoordinator } from '../reporting/role-coordinator.mjs';
 import { reportModel } from '../reporting/report.mjs';
@@ -97,7 +97,7 @@ function runtimeHarness() {
     const metrics = new Map();
     class Metric { constructor(name) { this.name = name; } add(value) { metrics.set(this.name, (metrics.get(this.name) || 0) + value); } }
     let logins = 0;
-    const ctx = vm.createContext({ __ENV: {}, http: {}, check: (value, rules) => Object.values(rules).every(rule => rule(value)),
+    const ctx = vm.createContext({ __ENV: {}, http: {}, configuredThinkRanges, check: (value, rules) => Object.values(rules).every(rule => rule(value)),
         sleep() {}, Counter: Metric, Trend: Metric, requiredEnvValue() {}, getApiUrl() {}, tenantHeaders() {},
         authenticateAccount: () => { logins++; return { token: 'refreshed', label: 'synthetic' }; } });
     vm.runInContext(readFileSync('k6/helpers/role-runtime.js', 'utf8').replace(/import[\s\S]*?from '[^']+';\n/g, '').replace(/^export /gm, ''), ctx);

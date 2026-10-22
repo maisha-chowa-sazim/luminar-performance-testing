@@ -19,10 +19,10 @@ The separation into config, reusable helpers, business flows and scenario entryp
 | High — open | `flows/purchase-order.js` hardcodes shipment date `2026-09-28`; fixtures contain dated sample and work-order fields. | Shipment date is already in the past on review day. Confirm business validation and use approved relative dates or maintained seeds. Tenant/supplier/template IDs must also match the environment. Invalid seed data would measure rejection paths. |
 | Medium — partially addressed | Tenant/base URL defaults vary among `helpers/http.js`, `flows/style.js` and `flows/purchase-order.js`. | New performance setup requires explicit URL, tenant, buyer and all role credentials. Consolidate remaining functional-flow defaults and validate fixture dependencies in a future preflight step. |
 | Medium — open | `helpers/auth.js` accepts a token from a cookie in a check but then unconditionally calls `resp.json()`. | A non-JSON cookie-only login response can still throw. Normalize response parsing before supporting that response contract. |
-| Medium — open | Failure logs throughout flows/helpers include full response bodies. | These can contain sensitive data and add overhead during stress. Add opt-in sanitized diagnostics; keep raw terminal logs private. Generated stakeholder PDFs do not embed response bodies or credentials. |
+| Medium — open | Failure logs throughout flows/helpers include full response bodies. | These can contain sensitive data and add overhead during stress. Add opt-in sanitized diagnostics; keep raw terminal logs private. Generated HTML reports do not embed response bodies or credentials. |
 | Medium — partially addressed | Signed upload URLs and generated resource paths can create high-cardinality URL tags. | Performance profiles exclude the URL system tag and retain stable request names. Existing smoke scenarios retain their current options. |
 | Medium — open | `flows/tech-pack.js` loads binary fixtures per VU and constructs multipart buffers. | At 100 VUs, load-generator CPU/RAM and upload bandwidth may become limiting. Monitor the generator as well as the application; do not discard bodies globally because flows need response IDs. |
-| Medium — addressed / bounded | No shareable automated report workflow existed. | Added unique run directories, PDF/HTML, raw aggregate summary and metadata; failure status is preserved. Reports include endpoint aggregates for performance profiles, checks, thresholds and explicit measurement limitations. |
+| Medium — addressed / bounded | No shareable automated report workflow existed. | Added unique run directories, HTML, raw aggregate summary and metadata; failure status is preserved. Reports include endpoint aggregates for performance profiles, checks, thresholds and explicit measurement limitations. |
 | Medium — open | Aggregate-only results cannot identify the exact saturation point or confirm ramp-down recovery. | Add time-series output/server telemetry for breaking-point investigation. A 100-VU stage observes stress at that level; it does not prove the maximum sustainable capacity. |
 | Low — addressed | Root README described obsolete smoke coverage and claimed scenarios that did not exist. | Updated run guidance, prerequisites, profile durations, reports and review links. |
 
@@ -37,9 +37,9 @@ The separation into config, reusable helpers, business flows and scenario entryp
 
 ## Validation performed
 
-`npm run test:reporting` checks all five scenarios using `k6 inspect`, verifies load stages and completion gates, tests assessment handling, and executes real k6 with synthetic metrics for pass, threshold failure and setup failure. It checks PDF/HTML generation and exit-code preservation. The synthetic scenarios make no network requests and are removed afterward. Their generated reports are plumbing examples, not Luminar performance results.
+`npm run test:reporting` checks all five scenarios using `k6 inspect`, verifies load stages and completion gates, tests assessment handling, and executes real k6 with synthetic metrics for pass, threshold failure and setup failure. It checks HTML generation and exit-code preservation. The synthetic scenarios make no network requests and are removed afterward. Their generated reports are plumbing examples, not Luminar performance results.
 
-Validated locally with k6 2.2.0 and Node 26.5.0. PDFKit is pinned in package.json/package-lock.json. No live API behavior or production capacity has been validated.
+Validated locally with k6 2.2.0 and Node 26.5.0. No live API behavior or production capacity has been validated.
 
 ## References
 

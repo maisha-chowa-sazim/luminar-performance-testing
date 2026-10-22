@@ -18,3 +18,4 @@ node_modules/
 # Temporary report entrypoints (cleaned after runs)
 k6/scenarios/.report-*/
 docs
+k6/results/

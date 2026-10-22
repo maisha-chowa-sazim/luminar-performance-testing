@@ -69,15 +69,15 @@ The requested table has five load levels, all covered below. Durations **include
 | `npm run test:loads:50` | 50 | 2 min | 4 min | 2 min | 8 min |
 | `npm run test:loads:100` | 100 | 1 min | 3 min | 1 min | 5 min |
 
-Configuration lives in `config/performance.js`; each scenario has its own entrypoint in `scenarios/load-<users>-users.js`. The default acceptance criteria are HTTP failures <1%, HTTP p95 <3000ms, p99 <5000ms, checks >99%, journey success >99%, and at least one started and successfully completed journey. These are **provisional SLOs**, not agreed business requirements. Stress profiles keep the same criteria to expose degradation.
+Configuration lives in `config/performance.js`; each scenario has its own entrypoint in `scenarios/load-<users>-users.js`. The default acceptance criteria are HTTP failures <1%, regular API HTTP p95 <2000ms, p99 <2000ms, checks >99%, journey success >99%, and at least one started and successfully completed journey. These are **provisional SLOs**, not agreed business requirements. Stress profiles keep the same criteria to expose degradation.
 
 Performance setup requires `BASE_URL`, `LUMINAR_FACTORY_ID`, `LUMINAR_ORGANIZATION_ID`, `LUMINAR_BUYER_ID`, plus `_EMAIL` and `_PASSWORD` for each of `MERCHANDISER`, `EXECUTIVE`, `SENIOR_MERCHANDISER` and `INVENTORY`. Use locally supplied credentials. Verify fixture IDs/dates and restore the disposable test dataset between runs; see [QA review](../docs/k6-qa-review.md).
 
-## Automatic stakeholder PDF reports
+## Automatic HTML reports
 
-Prerequisites: Node.js 22+ and k6 (validated with 2.2.0). Install pinned reporting dependencies with `npm ci`. No browser or cloud reporting service is required.
+Prerequisites: Node.js 22+ and k6 (validated with 2.2.0). Install the project with `npm ci`. No browser or cloud reporting service is required.
 
-Use the Node/npm runner for **every run that needs a PDF**. It loads the root `.env` automatically; existing exported environment values take precedence. Plain `k6 run` does not invoke Node's PDF renderer.
+Use the Node/npm runner for **every run that needs an HTML report**. It loads the root `.env` automatically; existing exported environment values take precedence. Plain `k6 run` does not invoke the HTML report generator.
 
 ```bash
 npm ci
@@ -89,8 +89,7 @@ npm run test:load:5
 
 Every runner invocation creates `k6/results/<UTC timestamp>-<scenario>-<unique ID>/` containing:
 
-- `report.pdf`: shareable stakeholder report with assessment, environment/revision, profile, throughput, error rate, latency percentiles, journey completion, threshold results, endpoint breakdown (load profiles), functional checks and interpretation notes.
-- `report.html`: readable/printable version of the same report.
+- `report.html`: shareable report with assessment, environment/revision, profile, throughput, error rate, latency percentiles, journey completion, threshold results, endpoint breakdown (load profiles), functional checks and interpretation notes.
 - `summary.json`: k6 aggregate metrics, when k6 reaches summary generation.
 - `metadata.json`: scenario, UTC times, revision (including dirty-tree marker), engine version and exit status.
 
@@ -102,9 +101,9 @@ The runner loads the native layout in `config/dashboard.json` to avoid a reprodu
 npm run test:dashboard -- load-5-users
 ```
 
-Replace `load-5-users` with any scenario name under `scenarios/`. The dashboard opens at `http://localhost:5665`; close its browser tab when finished so k6 can exit and the regular PDF/HTML reports can complete. The dashboard can take over a minute to show graphs for very short tests.
+Replace `load-5-users` with any scenario name under `scenarios/`. The dashboard opens at `http://localhost:5665`; close its browser tab when finished so k6 can exit and the regular HTML reports can complete. The dashboard can take over a minute to show graphs for very short tests.
 
-The runner prints the PDF path and preserves nonzero k6 exit codes. Setup/initialization failures still produce an incomplete report when the runner can finish; missing metrics are shown as N/A. Hard termination of the runner (SIGKILL), disk failure or missing Node dependencies can prevent report generation. Console diagnostics remain in the terminal and are not embedded in stakeholder reports.
+The runner prints the HTML report path and preserves nonzero k6 exit codes. Setup/initialization failures still produce an incomplete report when the runner can finish; missing metrics are shown as N/A. Hard termination of the runner (SIGKILL), disk failure or missing Node dependencies can prevent report generation. Console diagnostics remain in the terminal and are not embedded in stakeholder reports.
 
 Reports aggregate the entire execution, including setup and ramps. They do not prove steady-state-only performance or a breaking point. Use server metrics and k6 time-series output separately for saturation/recovery analysis. Do not override the load schedule through `K6_*` environment settings when comparing the documented profiles; edit the shared profile configuration deliberately. The runner uses the legacy `handleSummary` schema explicitly for consistent report parsing.
 
@@ -116,4 +115,4 @@ npm run test:reporting
 
 This creates clearly named `report-selftest-*` synthetic example reports under ignored `results/`. They are not application performance results.
 
-Regular application API latency targets are p95 < 2s and p99 < 5s. Techpack upload-URL generation, file transfer, and creation use separate provisional targets: p95 < 30s and p99 < 45s, configurable with `ROLE_TECHPACK_P95_MS` and `ROLE_TECHPACK_P99_MS`. Work-order approval and the supplier-status transition use the senior-merchandiser account before receiving. BOM, costing and purchase-order approvals/submissions remain excluded.
+Regular application API latency targets are p95 < 2s and p99 < 2s. Techpack upload-URL generation, file transfer, and creation use separate provisional targets: p95 < 30s and p99 < 45s, configurable with `ROLE_TECHPACK_P95_MS` and `ROLE_TECHPACK_P99_MS`. Work-order approval and the supplier-status transition use the senior-merchandiser account before receiving. BOM, costing and purchase-order approvals/submissions remain excluded.

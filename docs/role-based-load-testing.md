@@ -40,7 +40,7 @@ Setup authenticates only selected accounts sequentially using the existing bound
 
 Role runs default to `LOGIN_DELAY_SECONDS=5` between accounts and `LOGIN_RETRY_BASE_SECONDS=30` for a 429 without a usable `Retry-After` header. Fallback cooldown doubles per retry (30s, then 60s with the default two retries). A valid server `Retry-After` is respected, with at least the inter-account delay. A wait above `LOGIN_MAX_RETRY_WAIT_SECONDS` (default 120s) fails instead of retrying early. Existing environment values override these defaults. These are starting settings, not measured server limits. Setup may take several minutes at maximum load and remains outside the timed business workload.
 
-If setup is rate-limited, increase login pacing deliberately, for example `LOGIN_DELAY_SECONDS=10 LOGIN_RETRY_BASE_SECONDS=60 npm run test:roles:smoke`. Do not disable server throttling or repeatedly restart a failing test. A setup failure leaves the business result incomplete; a very short failed run may not produce dashboard HTML even though the stakeholder PDF is generated.
+If setup is rate-limited, increase login pacing deliberately, for example `LOGIN_DELAY_SECONDS=10 LOGIN_RETRY_BASE_SECONDS=60 npm run test:roles:smoke`. Do not disable server throttling or repeatedly restart a failing test. A setup failure leaves the business result incomplete; a very short failed run may not produce dashboard HTML even though the HTML report is generated.
 
 Before live execution, check:
 
@@ -108,7 +108,7 @@ Use `ROLE_*` settings rather than `K6_VUS`, `K6_STAGES`, segmentation, or other 
 | `ROLE_THINK_SCALE` | `1` | Multiplier for randomized human delays; 0 disables them |
 | `ROLE_SESSION_MAX_AGE_SECONDS` | `900` | Renew sessions at safe workflow boundaries after this age |
 | `ROLE_POLL_TIMEOUT_SECONDS`, `ROLE_POLL_INTERVAL_SECONDS` | `60`, `2` | Bounded application read/state polling and idle queue polling interval |
-| `ROLE_API_P95_MS`, `ROLE_API_P99_MS` | `2000`, `5000` | Provisional application HTTP targets |
+| `ROLE_API_P95_MS`, `ROLE_API_P99_MS` | `2000`, `2000` | Provisional application HTTP targets |
 | `ROLE_HTTP_FAILURE_RATE` | `0.01` | Application HTTP failure rate must be below this value |
 | `ROLE_COMPLETION_RATE` | `0.99` | Receipt-verified workflows / all attempted workflows must be at least this value |
 
@@ -118,16 +118,16 @@ Configure randomized human delays with `ROLE_THINK_<ACTION>_MIN` and `ROLE_THINK
 
 | Action | Default seconds |
 | --- | --- |
-| `LOGIN` | 2–5 |
-| `STYLE` | 15–45 |
-| `TECHPACK` | 20–60 |
-| `SAMPLE` | 20–60 |
-| `BOM` | 30–90 |
-| `COSTING` | 20–60 |
-| `PURCHASE` | 15–45 |
-| `DISCOVER` | 5–20 |
+| `LOGIN` | 0.5–2 |
+| `STYLE` | 0.5–2 |
+| `TECHPACK` | 30–45 |
+| `SAMPLE` | 0.5–2 |
+| `BOM` | 0.5–2 |
+| `COSTING` | 0.5–2 |
+| `PURCHASE` | 0.5–2 |
+| `DISCOVER` | 0.5–2 |
 
-These are assumptions to replace with observed behavior. Delays follow business actions; they do not stand in for API responses or asynchronous state checks. Only safe GETs are polled for transient failures/state readiness. `Retry-After` is respected within the configured polling deadline. There is a short backoff after failed iterations to avoid retry storms, and idle Inventory VUs wait between queue checks.
+These defaults reflect the agreed accelerated workload: 0.5–2 seconds for login and other listed actions, and 30–45 seconds after techpack creation. They apply at `ROLE_THINK_SCALE=1`; environment range overrides take precedence. Login think time is a navigation pause after session assignment/renewal, separate from the 5-second inter-account authentication pacing and bounded 429 cooldowns. These are assumptions to replace with observed behavior. Delays follow business actions; they do not stand in for API responses or asynchronous state checks. Only safe GETs are polled for transient failures/state readiness. `Retry-After` is respected within the configured polling deadline. There is a short backoff after failed iterations to avoid retry storms, and idle Inventory VUs wait between queue checks.
 
 ## Metrics, dashboard, and reports
 
@@ -137,7 +137,7 @@ The runner loads `k6/config/dashboard.json` using k6's native `XK6_DASHBOARD_CON
 
 An explicitly configured `XK6_DASHBOARD_CONFIG` or repository-root `.dashboard.json` takes precedence. Custom layouts can reintroduce the crash if charts gain series after they first render. Restart the test and reload the dashboard after changing its configuration; an already-running k6 process retains its original layout. This workaround was browser-tested against a local synthetic workload, without QA traffic.
 
-Every Node run produces the existing PDF/HTML reports, summary JSON when available, metadata, dashboard export, and `handoff-ledger.json` under a unique `k6/results/` directory. The ledger retains every started producer workflow, known created entity IDs (including partially failed flows), order relationships, claim ownership, state, timestamps, and sanitized failure categories. There is no automatic recovery/replay from this file.
+Every Node run produces the HTML reports, summary JSON when available, metadata, dashboard export, and `handoff-ledger.json` under a unique `k6/results/` directory. The ledger retains every started producer workflow, known created entity IDs (including partially failed flows), order relationships, claim ownership, state, timestamps, and sanitized failure categories. There is no automatic recovery/replay from this file.
 
 Endpoint summaries include request counts/rates, average, p90/p95/p99, and HTTP errors. Functional check counts remain visible. Business metrics include:
 
@@ -157,12 +157,12 @@ Application HTTP thresholds use `traffic:application` and exclude coordinator re
 
 Style names, buyer PO numbers, GRN numbers, identify the run where the existing contracts support it; linked IDs and the ledger identify remaining entities. The test creates persistent records and uploads real fixture files. There is no complete safe teardown API in this suite. Reset only the approved disposable QA seed snapshot and test storage prefix through the environment's existing process, preserving the ledger for reconciliation. Do not delete ordinary users' data or silently rerun failed receipts.
 
-Run `npm run test:reporting` for offline checks. They validate allocation limits, credential selection, claim concurrency, failure retention, quantities/relationships, safe session renewal, failed-step behavior, report assessment, k6 scenario parsing, PDF/dashboard exports, and actual isolated k6 VUs handing off **synthetic** orders through the local coordinator. These are tooling tests, not proof that Luminar accepts the business payloads or meets performance targets.
+Run `npm run test:reporting` for offline checks. They validate allocation limits, credential selection, claim concurrency, failure retention, quantities/relationships, safe session renewal, failed-step behavior, report assessment, k6 scenario parsing, HTML/dashboard exports, and actual isolated k6 VUs handing off **synthetic** orders through the local coordinator. These are tooling tests, not proof that Luminar accepts the business payloads or meets performance targets.
 
 The browser regression also checks the live dashboard across setup, VU activation, and delayed business metrics using isolated headless Chrome and local HTTP requests. It uses the standard macOS Chrome path or `DASHBOARD_TEST_BROWSER`; it skips with an explanation when no browser binary is available.
 
-Live validation still requires QA confirmation of the retained costing route/master data. Run the smoke command, inspect its ledger and PDF, and confirm one complete registered order, one verified receipt, correct quantities, no remaining backlog, no duplicate receipts, and no integrity errors before attempting 10, 20, or 50 VUs.
+Live validation still requires QA confirmation of the retained costing route/master data. Run the smoke command, inspect its ledger and HTML report, and confirm one complete registered order, one verified receipt, correct quantities, no remaining backlog, no duplicate receipts, and no integrity errors before attempting 10, 20, or 50 VUs.
 
-Techpack upload-URL generation, file uploads, and creation are tagged `workload:techpack`. Their configurable per-request latency targets are p95 < 30s and p99 < 45s (`ROLE_TECHPACK_P95_MS=30000`, `ROLE_TECHPACK_P99_MS=45000`). Regular API requests use `workload:api` and retain p95 < 2s / p99 < 5s. All application requests, including uploads, remain subject to the HTTP failure-rate gate. These are provisional request-latency budgets, not total multi-file workflow duration targets. Historical reports retain their original acceptance rules. Work-order approval and supplier transition are restored; this revision has not been rerun against QA.
+Techpack upload-URL generation, file uploads, and creation are tagged `workload:techpack`. Their configurable per-request latency targets are p95 < 30s and p99 < 45s (`ROLE_TECHPACK_P95_MS=30000`, `ROLE_TECHPACK_P99_MS=45000`). Regular API requests use `workload:api` and retain p95 < 2s / p99 < 2s. All application requests, including uploads, remain subject to the HTTP failure-rate gate. These are provisional request-latency budgets, not total multi-file workflow duration targets. Historical reports retain their original acceptance rules. Work-order approval and supplier transition are restored; this revision has not been rerun against QA.
 
 Setup authenticates one existing senior-merchandiser account (`SENIOR_MERCHANDISER_EMAIL` / `SENIOR_MERCHANDISER_PASSWORD`) in addition to the business-role pools. This shared supporting session performs work-order approval and supplier transitions inside Merchandiser VUs and does not add concurrent VUs. No executive account is required.

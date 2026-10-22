@@ -19,9 +19,6 @@
     "test:loads:20": "ROLE_TOTAL_VUS=20 node k6/reporting/run.mjs load-roles",
     "test:loads:50": "ROLE_TOTAL_VUS=50 node k6/reporting/run.mjs load-roles"
   },
-  "dependencies": {
-    "pdfkit": "0.17.2"
-  },
   "engines": {
     "node": ">=22.0.0"
   }

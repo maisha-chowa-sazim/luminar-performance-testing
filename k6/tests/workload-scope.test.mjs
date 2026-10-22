@@ -15,7 +15,7 @@ test('only work-order approval and its supporting role are included', () => {
 test('upload traffic has a separate configurable budget while regular API and failure gates remain', () => {
     const config=roleConfig({}), options=roleOptions(config), gates=options.thresholds;
     assert.deepEqual(gates['http_req_duration{traffic:application}'],[]);
-    assert.deepEqual(gates['http_req_duration{traffic:application,workload:api}'],['p(95)<2000','p(99)<5000']);
+    assert.deepEqual(gates['http_req_duration{traffic:application,workload:api}'],['p(95)<2000','p(99)<2000']);
     assert.deepEqual(gates['http_req_duration{traffic:application,workload:techpack}'],['p(95)<30000','p(99)<45000']);
     assert.deepEqual(gates['http_req_failed{traffic:application}'],['rate<0.01']);
     assert.ok(Object.values(options.scenarios).every(s=>s.tags.workload==='api'));

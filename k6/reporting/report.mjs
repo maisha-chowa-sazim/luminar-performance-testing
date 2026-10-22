@@ -1,4 +1,6 @@
 import { writePresentation } from './presentation.mjs';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 const number = value => Number.isFinite(value) ? value.toFixed(2) : 'N/A';
 const percent = value => Number.isFinite(value) ? `${(value * 100).toFixed(2)}%` : 'N/A';
@@ -56,7 +58,7 @@ export function reportModel(summary, metadata) {
         })],
         ['Functional checks', checks.length ? checks : ['No check data available.']],
         ['Interpretation and next steps', [
-            'Performance profiles use provisional targets: HTTP errors <1%, p95 <3000ms, p99 <5000ms, checks and completed-journey success >99%. Agree SLOs with stakeholders.',
+            'Performance profiles use provisional targets: HTTP errors <1%, regular API p95 <2000ms, p99 <2000ms, checks and completed-journey success >99%. Agree SLOs with stakeholders.',
             'Metrics aggregate the whole run, including ramps and setup. They are not steady-state-only measurements. VUs represent concurrent journeys, not requests per second or distinct accounts.',
             'Full-journey loads share role accounts; the merchandiser session is created in setup, and other roles log in during each journey. Upload traffic is included in HTTP totals.',
             'Forced interruption can leave unfinished journeys without a success sample. Compare started/completed counts and the local execution output. Missing metrics are N/A, never assumed zero latency.',
@@ -88,5 +90,20 @@ export function reportModel(summary, metadata) {
 }
 
 export async function writeReports(directory, summary, metadata) {
+    // Explicit report-only reassessment preserves the original summary and exit code.
+    let review;
+    try { review = JSON.parse(await readFile(path.join(directory, 'review.json'), 'utf8')); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (review?.regularApiTargetMs !== undefined) {
+        const target = review.regularApiTargetMs;
+        if (!Number.isFinite(target) || target <= 0) throw new Error('regularApiTargetMs must be a positive number');
+        summary = structuredClone(summary);
+        metadata = structuredClone(metadata);
+        if (metadata.roleConfiguration) Object.assign(metadata.roleConfiguration, { apiP95: target, apiP99: target });
+        for (const [name, metric] of Object.entries(summary?.metrics || {})) {
+            if (!name.startsWith('http_req_duration{') || !name.includes('workload:api')) continue;
+            metric.thresholds = Object.fromEntries([95, 99].map(p => [`p(${p})<${target}`, { ok: Number.isFinite(metric.values?.[`p(${p})`]) && metric.values[`p(${p})`] < target }]));
+        }
+    }
     return writePresentation(directory, summary, metadata, reportModel(summary, metadata).status);
 }
