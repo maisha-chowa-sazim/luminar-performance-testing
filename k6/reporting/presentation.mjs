@@ -62,6 +62,7 @@ export function presentationModel(summary, metadata, status) {
     walk(summary?.root_group);
     const completion = handoff.attempted ? handoff.received / handoff.attempted : undefined;
     const applicationRequests = v(role ? 'http_reqs{traffic:application}' : 'http_reqs');
+    const apiRequests = v(role ? 'http_reqs{traffic:application,workload:api}' : 'http_reqs{workload:api}');
     const pacing = !role || !Number.isFinite(config.thinkScale) ? 'Not recorded' : config.thinkScale === 0 ? 'Human think time disabled' : `Human think time enabled (scale ${config.thinkScale})`;
     const functionalBroken = checks.some(check => check.fails > 0) || ['incorrect_inventory_quantities', 'data_integrity_violations', 'duplicate_successful_receipts', 'coordination_errors'].some(key => v(key).count > 0);
     const functional = role ? !Number.isFinite(completion) ? 'INCOMPLETE' : completion < config.completion || functionalBroken || (metadata.roleFailures || []).length ? 'FAIL' : 'PASS' : 'See checks';
@@ -69,7 +70,7 @@ export function presentationModel(summary, metadata, status) {
         [role ? 'Application p95' : 'HTTP p95', duration(latency['p(95)']), `About 95% of requests are this fast or faster.${role ? ` Target < ${duration(config.apiP95)}; regular API only.` : ''}`],
         [role ? 'Application p99' : 'HTTP p99', duration(latency['p(99)']), `About 99% of requests are this fast or faster.${role ? ` Target < ${duration(config.apiP99)}; regular API only.` : ''}`],
         ['Average response time', duration(latency.avg), role ? 'Mean regular API duration; excludes human pauses and techpack.' : 'Mean HTTP duration; excludes human pauses.'],
-        ['Requests per second (RPS)', `${fmt(applicationRequests.rate)} req/s`, role ? 'Whole-run application traffic, including techpack; excludes setup and coordinator calls. Pacing affects this rate.' : 'Whole-run HTTP traffic. Pacing affects this rate.'],
+        ['Requests per second (RPS)', `${fmt(apiRequests.rate)} req/s`, 'Regular API requests per elapsed second; excludes techpack, setup, and coordinator requests. Whole-run rate; uploads and think time still affect elapsed time. N/A if not captured.'],
         ['HTTP failure rate', pct(failures), role ? `Failed application HTTP requests. Target < ${pct(config.httpFailure)}.` : 'Failed HTTP requests / all HTTP requests.'],
         role ? ['Workflow completion', pct(completion), `${handoff.received ?? 'N/A'} received and verified / ${handoff.attempted ?? 'N/A'} attempted; includes early failures.`] : ['Check success', pct(v('checks').rate), 'Passed assertions / all recorded functional assertions.'],
         ['Application requests measured', fmt(applicationRequests.count, 0), role ? 'Application requests only, including techpack; sample size behind the observed traffic rate.' : 'All measured HTTP requests.'],

@@ -31,6 +31,7 @@ export function performanceOptions(users) {
         // Exclude dynamic URLs (including signed upload URLs) from metric tags.
         systemTags: ['status', 'method', 'name', 'group', 'check', 'error_code', 'scenario', 'expected_response'],
         thresholds: {
+            'http_reqs{workload:api}': [],
             ...endpointMetrics,
             // Provisional acceptance targets: agree these with product owners.
             'http_req_failed{scenario:full_journey}': ['rate<0.01'],

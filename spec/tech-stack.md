@@ -35,9 +35,9 @@ Per-action `ROLE_THINK_<ACTION>_MIN/MAX` settings override the ranges. The dedic
 
 ## Supported load and implementation gaps
 
-Independent-role runs currently enforce a total cap of 50 VUs. Existing allocations are 4+1, 8+2, 16+4, and 40+10 Merchandiser/Inventory users for totals of 5, 10, 20, and 50. Business VUs require distinct selected identities; the supporting Senior Merchandiser session is shared.
+Independent-role runs enforce a total cap of 100 VUs. Existing allocations are 4+1, 8+2, 16+4, 40+10, and 80+20 Merchandiser/Inventory users for totals of 5, 10, 20, 50, and 100. Business VUs require distinct selected identities; the supporting Senior Merchandiser session is shared.
 
-The requested 100-user workload is planned. A legacy 100-user profile definition does not provide an executable, supported 100-user independent-role test. Supporting it requires coordinated changes to limits, allocation, account provisioning, runner validation, tests, and documentation. An 80+20 split would preserve the current ratio but is a proposal to validate during implementation.
+The five named files use 10m/15m/20m/15m/10m steady periods for 5/10/20/50/100 VUs. They reuse `helpers/role-scenario.js`, and the runner applies the same named profile during preflight and execution. The 100-user workload requires 80 distinct Merchandiser and 20 Inventory identities. The local declared 50/12 pool remains insufficient; no credentials have been modified. Offline validation is not proof of live application capacity.
 
 The stakeholder two-second maximum and the current p95/p99 gates differ; see [mission](mission.md#performance-expectations). This constitution records that gap without changing executable thresholds.
 

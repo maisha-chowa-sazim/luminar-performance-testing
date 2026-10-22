@@ -12,9 +12,9 @@ import { startRoleCoordinator } from '../reporting/role-coordinator.mjs';
 import { reportModel } from '../reporting/report.mjs';
 
 const users = JSON.parse(readFileSync('k6/data/users.json'));
-function credentials() {
-    const env = { MERCHANDISER_ACCOUNT_COUNT: '50', INVENTORY_ACCOUNT_COUNT: '12' };
-    for (const [role, count] of [['MERCHANDISER', 50], ['INVENTORY', 12]]) for (let i = 1; i <= count; i++) {
+function credentials(merchandisers = 50, inventory = 12) {
+    const env = { MERCHANDISER_ACCOUNT_COUNT: String(merchandisers), INVENTORY_ACCOUNT_COUNT: String(inventory) };
+    for (const [role, count] of [['MERCHANDISER', merchandisers], ['INVENTORY', inventory]]) for (let i = 1; i <= count; i++) {
         env[`${role}_ACCOUNT_${i}_EMAIL`] = `${role}-${i}@example.test`;
         env[`${role}_ACCOUNT_${i}_PASSWORD`] = 'synthetic-password';
     }
@@ -24,18 +24,18 @@ function credentials() {
     return env;
 }
 
-test('independent-role allocations preserve the 50-VU cap throughout ramps, grace, and drain', () => {
-    for (const total of [2, 5, 10, 20, 50]) {
+test('independent-role allocations preserve the 100-VU cap throughout ramps, grace, and drain', () => {
+    for (const total of [2, 5, 10, 20, 50, 100]) {
         const config = roleConfig({ ROLE_TOTAL_VUS: total });
         const options = roleOptions(config);
         const peak = Object.values(options.scenarios).reduce((sum, scenario) => sum + Math.max(...scenario.stages.map(s => s.target)), 0);
         assert.equal(peak, total);
-        assert.ok(peak <= 50);
+        assert.ok(peak <= 100);
         assert.ok(seconds(config.steady) >= 600);
         assert.equal(options.scenarios.merchandiser.exec, 'merchandiser');
         assert.equal(options.scenarios.inventory.exec, 'inventory');
     }
-    assert.throws(() => roleConfig({ ROLE_TOTAL_VUS: '51' }), /ROLE_TOTAL_VUS/);
+    assert.throws(() => roleConfig({ ROLE_TOTAL_VUS: '101' }), /ROLE_TOTAL_VUS/);
     assert.throws(() => roleConfig({ ROLE_TOTAL_VUS: '50', ROLE_MERCHANDISER_VUS: '45', ROLE_INVENTORY_VUS: '10' }), /summing/);
     assert.throws(() => roleConfig({ ROLE_STEADY: '-1m' }), /duration/);
     assert.throws(() => roleConfig({ ROLE_STEADY: '0s' }), /ROLE_STEADY/);
@@ -52,6 +52,12 @@ test('role credential pools select distinct real variable mappings and fail befo
     assert.throws(() => selectRoleAccounts({ ...env, INVENTORY_ACCOUNT_COUNT: '9' }, users, config), /Insufficient/);
     assert.throws(() => selectRoleAccounts({ ...env, MERCHANDISER_ACCOUNT_40_PASSWORD: '' }, users, config), /ACCOUNT_40_PASSWORD/);
     assert.throws(() => selectRoleAccounts({ ...env, INVENTORY_ACCOUNT_1_EMAIL: env.MERCHANDISER_ACCOUNT_1_EMAIL }, users, config), /Duplicate/);
+    const hundred = roleConfig({ ROLE_TOTAL_VUS: '100' });
+    assert.throws(() => selectRoleAccounts(env, users, hundred), /need 80/);
+    assert.throws(() => selectRoleAccounts(credentials(80, 19), users, hundred), /need 20/);
+    const larger = selectRoleAccounts(credentials(80, 20), users, hundred);
+    assert.equal(larger.merchandiser.length, 80);
+    assert.equal(larger.inventory.length, 20);
 });
 
 test('atomic handoff prevents duplicate claims, keeps failed claims, rejects cross-run access, and persists backlog', async () => {

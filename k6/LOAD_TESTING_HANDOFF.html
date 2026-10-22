@@ -26,42 +26,15 @@
                     VU and saves its claim in a run ledger. Failed or uncertain
                     receipt writes are recorded and never automatically retried
                     or reassigned.</p>
-                <div class="chart" style="margin:18px 0"><h3
-                        style="margin-top:0">Role allocation by load
-                        level</h3><p class="muted">Blue: Merchandiser · Green:
-                        Inventory</p><svg viewBox="0 0 940 200" role="img"
-                        aria-label="Stacked bars showing Merchandiser and Inventory VU allocations for 5, 10, 20 and 50 users"><text
-                            x="0" y="27" fill="#475569" font-size="13">5
-                            VUs</text><rect x="100" y="6" width="52" height="28"
-                            rx="3" fill="#2563eb" /><rect x="152" y="6"
-                            width="13" height="28" rx="3" fill="#0d9488" /><text
-                            x="175" y="27" fill="#475569" font-size="13">4
-                            Merchandiser + 1 Inventory</text><text x="0" y="72"
-                            fill="#475569" font-size="13">10 VUs</text><rect
-                            x="100" y="51" width="104" height="28" rx="3"
-                            fill="#2563eb" /><rect x="204" y="51" width="26"
-                            height="28" rx="3" fill="#0d9488" /><text x="240"
-                            y="72" fill="#475569" font-size="13">8 Merchandiser
-                            + 2 Inventory</text><text x="0" y="117"
-                            fill="#475569" font-size="13">20 VUs</text><rect
-                            x="100" y="96" width="208" height="28" rx="3"
-                            fill="#2563eb" /><rect x="308" y="96" width="52"
-                            height="28" rx="3" fill="#0d9488" /><text x="370"
-                            y="117" fill="#475569" font-size="13">16
-                            Merchandiser + 4 Inventory</text><text x="0" y="162"
-                            fill="#475569" font-size="13">50 VUs</text><rect
-                            x="100" y="141" width="520" height="28" rx="3"
-                            fill="#2563eb" /><rect x="620" y="141" width="130"
-                            height="28" rx="3" fill="#0d9488" /><text x="760"
-                            y="162" fill="#475569" font-size="13">40
-                            Merchandiser + 10 Inventory</text></svg></div>
-
-                <p>Normal profiles use a 2-minute ramp-up, 15-minute steady
-                    phase and 2-minute producer ramp-down. Inventory remains
-                    available for in-flight work and drain; its scheduled stages
-                    total 36 minutes, plus setup and any graceful completion.
-                    The shared approval session runs inside Merchandiser
-                    VUs.</p>
+                <div class="table-wrap"><table><thead><tr><th>VUs</th><th>Merchandiser + Inventory</th><th>Steady period</th></tr></thead><tbody>
+                    <tr><td>5</td><td>4 + 1</td><td>10 minutes</td></tr>
+                    <tr><td>10</td><td>8 + 2</td><td>15 minutes</td></tr>
+                    <tr><td>20</td><td>16 + 4</td><td>20 minutes</td></tr>
+                    <tr><td>50</td><td>40 + 10</td><td>15 minutes</td></tr>
+                    <tr><td>100</td><td>80 + 20</td><td>10 minutes</td></tr>
+                </tbody></table></div>
+                <p>Named files pin their role allocation and steady period. Default 2-minute ramps, producer completion grace, Inventory drain, and setup authentication are additional. The 100-user profile requires provisioned distinct accounts. The supporting approval account runs inside Merchandiser VUs.</p>
+                <p>The report RPS field counts regular API requests only, excluding techpack, setup, and coordinator requests. It remains a whole-run elapsed-time rate; uploads and pauses still affect achieved API throughput.</p>
                 <h2>Think time <span
                         style="font-size:14px;font-weight:400;color:#64748b">—
                         simulated user pauses</span></h2>

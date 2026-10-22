@@ -1,5 +1,5 @@
 import execution from 'k6/execution';
-import { accounts, authenticateAccount, validateAccounts } from '../helpers/session-pool.js';
+import { accounts, authenticateAccount, validateAccounts } from '../../helpers/session-pool.js';
 
 const maxDuration = __ENV.LOGIN_MAX_DURATION;
 if (!maxDuration?.trim()) throw new Error('LOGIN_MAX_DURATION is required');

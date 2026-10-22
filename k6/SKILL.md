@@ -44,7 +44,7 @@ The business scenarios create persistent styles, samples, BOMs, costings, orders
 
 ## Select a scenario
 
-For independent Merchandiser/Inventory concurrency, read [the role-based run guide](../docs/role-based-load-testing.md) and use `load-roles` through the Node runner (`npm run test:roles`). It uses the declared `*_ACCOUNT_COUNT`/`*_ACCOUNT_<n>_*` pools, two scenarios capped at 50 total VUs, randomized think time, durable atomic handoff, and GRN/work-order receipt read-back verification. The `test:roles:smoke`, `test:loads:10`, `test:loads:20`, and `test:loads:50` scripts select the documented workload. Legacy session guidance below applies to the arrival-rate scenario, not independent-role load. Verify the guide's fixture and costing-contract prerequisites before live execution.
+For independent Merchandiser/Inventory concurrency, read [the role-based run guide](../docs/role-based-load-testing.md) and use `load-roles` through the Node runner (`npm run test:roles`). It uses the declared `*_ACCOUNT_COUNT`/`*_ACCOUNT_<n>_*` pools, two scenarios capped at 100 total VUs, randomized think time, durable atomic handoff, and GRN/work-order receipt read-back verification. The `test:roles:smoke`, `test:load:10`, `test:load:20`, `test:load:50`, and `test:load:100` scripts select the documented workload. Legacy session guidance below applies to the arrival-rate scenario, not independent-role load. Verify the guide's fixture and costing-contract prerequisites before live execution.
 
 Use only entrypoints that exist in `k6/scenarios/`.
 
@@ -55,12 +55,13 @@ Use only entrypoints that exist in `k6/scenarios/`.
 | Validate one feature | `style-smoke`, `sample-smoke`, `tech-pack-smoke`, `bom-smoke`, `pre-costing-smoke` | Read the selected scenario for role and resource dependencies |
 | Complete business journey | `full-journey` | One VU/iteration through item receipt |
 | Light load | `npm run test:load:5` | 4 Merchandiser + 1 Inventory VU |
-| Target profile | `npm run test:loads:10` | 8 Merchandiser + 2 Inventory VUs |
-| Higher load | `npm run test:loads:20` | 16 Merchandiser + 4 Inventory VUs |
-| Maximum role load | `npm run test:loads:50` | 40 Merchandiser + 10 Inventory VUs |
+| Target profile | `npm run test:load:10` | 8 Merchandiser + 2 Inventory VUs |
+| Higher load | `npm run test:load:20` | 16 Merchandiser + 4 Inventory VUs |
+| High role load | `npm run test:load:50` | 40 Merchandiser + 10 Inventory VUs; 15m steady |
+| Maximum role load | `npm run test:load:100` | 80 Merchandiser + 20 Inventory VUs; 10m steady; requires provisioned accounts |
 | Fixed journey arrival rate | `load-arrival-rate` | Default 5 starts/minute for 5m, 20 preallocated VUs |
 
-All per-user load commands use `load-roles`; separate per-user load files and partial linked-flow scripts were removed. Role load defaults to a 15-minute steady phase, and total role concurrency is capped at 50. There is no 100-VU command. Stress, soak, and spike tests require explicit implementation and workload selection; they are not existing entrypoints.
+Per-user load commands select the matching `load-5-users`, `load-10-users`, `load-20-users`, `load-50-users`, or `load-100-users` entrypoint. These pin 5/10/20/50/100 VUs and 10m/15m/20m/15m/10m steady periods, using shared `helpers/role-scenario.js` lifecycle logic. Setup, ramps, producer grace, and Inventory drain are additional. Generic `load-roles` remains configurable with a 15-minute steady default. The combined role cap is 100; 100 users require 80 distinct Merchandiser and 20 Inventory accounts. Provision them before execution; do not guess or reuse identities. Soak and spike scenarios remain outside these named profiles.
 
 The full journey creates style → sample → tech pack/uploads → BOM → costing → purchase order → work order, then approves the work order as senior merchandiser, marks it SENT_TO_SUPPLIER and receives its items; other resource approvals/submissions remain excluded. Preserve resource IDs and role transitions from the implementation.
 
@@ -135,3 +136,7 @@ Validate changes with the relevant offline checks. `npm run test:reporting` exer
 For an executed test, give the environment, scenario/profile, UTC run timestamp, revision, exit status, and measured PASS/FAIL/incomplete assessment. Summarize HTTP failures, p95/p99, journey completion, and arrival drops where available. Link the exact generated PDF and supporting artifacts. Include baseline changes when a comparable baseline exists and state the limits of the evidence.
 
 For a test-design request, provide the relevant scenario/config changes, explicit workload and acceptance criteria, reproducible runner command, and validation performed. Clearly distinguish planned tests from executed measurements.
+
+## Regular API throughput
+
+The report's Requests per second (RPS) card uses `http_reqs{traffic:application,workload:api}` for role tests, excluding techpack, setup, and coordinator request counts. Elapsed time still includes uploads and human pauses. Do not subtract summed request durations or pauses to invent a no-upload/no-pause capacity. Historical runs without the scoped counter show N/A. Validate changed profiles offline before a separately authorized QA run.

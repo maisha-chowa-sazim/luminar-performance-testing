@@ -11,7 +11,7 @@ The primary load profile runs Merchandiser and Inventory users independently and
 | Decision | Implementation and reason |
 | --- | --- |
 | Independent concurrent roles | Two `ramping-vus` scenarios model producers and consumers progressing at different speeds. |
-| Maximum 50 business VUs | The configured role counts must sum to the requested total, which cannot exceed 50. |
+| Maximum 100 business VUs | The configured role counts must sum to the requested total, which cannot exceed 100. |
 | Work-order approval only | Senior Merchandiser approves each work order and sends it to the supplier before receiving. BOM, costing and purchase-order approvals/submissions are excluded. |
 | Receiving-only Inventory scope | Create and verify a GRN, confirm received quantities/status and one receipt. QC and stock-entry creation are excluded. |
 | Real upload traffic | Techpack creation requests upload URLs, transfers the fixture files and creates the techpack record. |
@@ -88,27 +88,28 @@ The coordinator listens on loopback and uses a random per-run key. Each transiti
 | Command | Merchandiser | Inventory | Total | Intended use |
 | --- | --- | --- | --- | --- |
 | `npm run test:roles:smoke` | 1 | 1 | 2 | One producer workflow; validate integration quickly. |
-| `npm run test:loads:5` | 4 | 1 | 5 | Baseline. |
-| `npm run test:loads:10` | 8 | 2 | 10 | Normal concurrent-user load. |
-| `npm run test:loads:20` | 16 | 4 | 20 | Increased concurrency. |
-| `npm run test:loads:50` | 40 | 10 | 50 | Maximum supported role load. |
+| `npm run test:load:5` | 4 | 1 | 5 | Baseline. |
+| `npm run test:load:10` | 8 | 2 | 10 | Normal concurrent-user load. |
+| `npm run test:load:20` | 16 | 4 | 20 | Increased concurrency. |
+| `npm run test:load:50` | 40 | 10 | 50 | High load; 15m steady. |
+| `npm run test:load:100` | 80 | 20 | 100 | Stress observation; 10m steady; provision accounts first. |
 
-| Timing setting | Smoke command | Normal 5/10/20/50 defaults |
+| Timing setting | Smoke command | Named 5/10/20/50/100 defaults |
 | --- | --- | --- |
 | Ramp up | 1 second | 2 minutes |
-| Steady phase | 30 seconds | 15 minutes |
+| Steady phase | 30 seconds | 10 / 15 / 20 / 15 / 10 minutes |
 | Ramp down | 1 second | 2 minutes |
 | Producer completion grace | 2 minutes | 10 minutes |
 | Extra Inventory drain | 30 seconds | 5 minutes |
-| Scheduled Merchandiser stages | 32 seconds | 19 minutes |
-| Scheduled Inventory stages | 3 minutes 3 seconds | 36 minutes |
+| Scheduled Merchandiser stages | 32 seconds | 14 / 19 / 24 / 19 / 14 minutes |
+| Scheduled Inventory stages | 3 minutes 3 seconds | 31 / 36 / 41 / 36 / 31 minutes |
 | Workflows per producer VU | Maximum 1 | Repeat while the producer window is open. |
 | Human think-time scale | 0: disabled | 1: full ranges below. |
 | Stop on workflow error | Enabled | Continue recording failures unless explicitly enabled. |
 
 Inventory stays at its allocated concurrency during producer completion grace and drain, then ramps down. Setup, graceful completion, teardown and an open dashboard connection can extend wall time. The smoke command is not expected to end after its 30-second steady phase.
 
-General `npm run test:roles` defaults to 10 VUs. A manually configured total of 2 outside the smoke command has a 10-minute steady default. `ROLE_MERCHANDISER_VUS` and `ROLE_INVENTORY_VUS` can override the allocation, provided their integer sum matches `ROLE_TOTAL_VUS` and the combined cap remains 50.
+General `npm run test:roles` defaults to 10 VUs. A manually configured total of 2 outside the smoke command has a 10-minute steady default. `ROLE_MERCHANDISER_VUS` and `ROLE_INVENTORY_VUS` can override the allocation, provided their integer sum matches `ROLE_TOTAL_VUS` and the combined cap remains 100.
 
 ## 4. Think time and realistic pacing
 
@@ -222,4 +223,6 @@ Triage order: distinguish functional failure from latency failure; identify the 
 
 Latest focused verification after restoring work-order approval: 19 offline tests passed and all 10 scenarios parsed without execution. The developer subsequently ran a smoke profile through its scheduled stages; stage completion alone does not prove reconciled workflow success or passing thresholds. This handoff makes no new live acceptance claim.
 
-Known limits: one local coordinator/runner; no distributed queue or resume; persistent QA records and uploaded files with no complete teardown; fixed master data; shared supporting approval identity; human pauses are assumptions; whole-run aggregate metrics; small smoke samples cannot establish reliable tail behavior. The normal 10/20/50 profiles must be assessed from their own complete artifacts and server telemetry before any capacity conclusion.
+Known limits: one local coordinator/runner; no distributed queue or resume; persistent QA records and uploaded files with no complete teardown; fixed master data; shared supporting approval identity; human pauses are assumptions; whole-run aggregate metrics; small smoke samples cannot establish reliable tail behavior. The named 5/10/20/50/100 profiles must be assessed from their own complete artifacts and server telemetry before any capacity conclusion.
+
+Named scenario files pin allocation and steady period. They must use the Node runner for coordinator/preflight lifecycle. The main report RPS excludes techpack requests but retains elapsed upload/pause time. The five named durations represent steady periods, not total wall time.

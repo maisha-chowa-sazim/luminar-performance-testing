@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { writeReports } from './report.mjs';
 import { startRoleCoordinator } from './role-coordinator.mjs';
-import { roleConfig, configuredThinkRanges } from '../config/role-load.mjs';
+import { roleConfig, configuredThinkRanges, isRoleScenario, roleScenarioEnvironment } from '../config/role-load.mjs';
 import { selectRoleAccounts } from '../helpers/role-accounts.mjs';
 import { shipmentDate } from '../helpers/shipment-date.mjs';
 
@@ -18,14 +18,18 @@ const args = process.argv.slice(2);
 const dashboardMode = args.includes('--dashboard');
 const scenarioArgs = args.filter(arg => arg !== '--dashboard');
 const input = scenarioArgs[0] || 'smoke';
-if (!/^[a-z0-9-]+(?:\.js)?$/.test(input) || scenarioArgs.length > 1 || args.length > (dashboardMode ? 2 : 1)) {
+if (!/^(?:test-scenarios\/)?[a-z0-9-]+(?:\.js)?$/.test(input) || scenarioArgs.length > 1 || args.length > (dashboardMode ? 2 : 1)) {
     throw new Error('Usage: node k6/reporting/run.mjs [--dashboard] [scenario-name]');
 }
-const scenario = input.replace(/\.js$/, '');
+let scenario = input.replace(/\.js$/, '');
+if (!existsSync(`k6/scenarios/${scenario}.js`) && !scenario.includes('/') && existsSync(`k6/scenarios/test-scenarios/${scenario}.js`)) {
+    scenario = `test-scenarios/${scenario}`;
+}
 if (!existsSync(`k6/scenarios/${scenario}.js`)) throw new Error(`Unknown scenario: ${scenario}`);
 let roleConfiguration;
-if (scenario === 'load-roles') {
-    roleConfiguration = roleConfig(process.env);
+const runEnvironment = roleScenarioEnvironment(process.env, scenario);
+if (isRoleScenario(scenario)) {
+    roleConfiguration = roleConfig(runEnvironment);
     const users = JSON.parse(await readFile(path.join(root, 'k6/data/users.json'), 'utf8'));
     selectRoleAccounts(process.env, users, roleConfiguration);
     for (const key of ['BASE_URL', 'LUMINAR_FACTORY_ID', 'LUMINAR_ORGANIZATION_ID', 'LUMINAR_BUYER_ID', 'LUMINAR_PAYMENT_PROVIDER_ID']) {
@@ -34,7 +38,7 @@ if (scenario === 'load-roles') {
     const purchase = JSON.parse(await readFile(path.join(root, 'k6/data/purchase.json'), 'utf8'));
     for (const shipment of purchase.shipments) shipmentDate(shipment.shipmentDate);
     if (['K6_VUS', 'K6_STAGES', 'K6_DURATION', 'K6_ITERATIONS', 'K6_SCENARIOS', 'K6_EXECUTION_SEGMENT', 'K6_EXECUTION_SEGMENT_SEQUENCE'].some(key => process.env[key])) {
-        throw new Error('Use ROLE_* workload settings; K6 workload overrides/segmentation are unsupported for the 50-VU role cap');
+        throw new Error('Use ROLE_* workload settings; K6 workload overrides/segmentation are unsupported for the 100-VU role cap');
     }
     if (process.env.ROLE_RUN_ID && !/^[a-zA-Z0-9-]{1,40}$/.test(process.env.ROLE_RUN_ID)) throw new Error('ROLE_RUN_ID must contain 1–40 letters, digits, or hyphens');
 }
@@ -42,7 +46,7 @@ if (scenario === 'load-roles') {
 const dashboardEnabled = dashboardMode || (process.env.K6_WEB_DASHBOARD === undefined
     ? scenario.startsWith('load-')
     : process.env.K6_WEB_DASHBOARD === 'true');
-const directory = path.join(root, 'k6/results', `${new Date().toISOString().replace(/[:.]/g, '-')}-${scenario}-${randomUUID().slice(0,8)}`);
+const directory = path.join(root, 'k6/results', `${new Date().toISOString().replace(/[:.]/g, '-')}-${scenario.replaceAll('/', '-')}-${randomUUID().slice(0,8)}`);
 await mkdir(directory, { recursive: true });
 const temporary = await mkdtemp(path.join(root, 'k6/scenarios/.report-'));
 const summaryPath = path.join(directory, 'summary.json');
@@ -60,7 +64,7 @@ const start = Date.now();
 let interrupted = false;
 let coordinator;
 try {
-    const childEnvironment = { ...process.env, K6_SUMMARY_MODE: 'full' };
+    const childEnvironment = { ...runEnvironment, K6_SUMMARY_MODE: 'full' };
     if (roleConfiguration) {
         metadata.roleThinkRanges = configuredThinkRanges(process.env);
         const runId = process.env.ROLE_RUN_ID || `lt-${randomUUID().slice(0, 12)}`;

@@ -48,7 +48,7 @@ HTTP duration, complete business-operation duration, and journey elapsed time ar
 4. Preserve failures, incomplete outcomes, and runner exit codes. Keep credentials, tokens, signed URLs, and raw response bodies out of shared results.
 5. Distinguish tooling checks, actual QA measurements, and planned capabilities. Do not claim a bottleneck or production capacity without supporting evidence.
 
-Slice 1 measurement is complete when all five requested load levels have actual results or an explicit blocker, with reproducible configuration, endpoint latency/error findings, verified business outcomes, and actionable findings for developers. A blocked level remains outstanding; a synthetic tooling test does not complete it. The current role suite supports up to 50 VUs; 100-user measurement requires implementation first.
+Slice 1 measurement is complete when all five requested load levels have actual results or an explicit blocker, with reproducible configuration, endpoint latency/error findings, verified business outcomes, and actionable findings for developers. A blocked level remains outstanding; a synthetic tooling test does not complete it. The role suite now supports all five levels up to 100 VUs through named scenario files. The 100-user measurement still requires sufficient provisioned accounts and actual QA execution.
 
 ## Sources and maintenance
 

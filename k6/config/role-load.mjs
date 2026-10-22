@@ -1,5 +1,25 @@
 // Pure configuration: shared by the Node runner, k6, and offline tests.
-export const ROLE_ALLOCATIONS = { 2: [1, 1], 5: [4, 1], 10: [8, 2], 20: [16, 4], 50: [40, 10] };
+export const ROLE_ALLOCATIONS = { 2: [1, 1], 5: [4, 1], 10: [8, 2], 20: [16, 4], 50: [40, 10], 100: [80, 20] };
+export const ROLE_LOAD_PROFILES = {
+    'load-5-users': { total: 5, steady: '10m', purpose: 'Baseline / light load' },
+    'load-10-users': { total: 10, steady: '15m', purpose: 'Target load / expected usage' },
+    'load-20-users': { total: 20, steady: '20m', purpose: '2x target / scalability' },
+    'load-50-users': { total: 50, steady: '15m', purpose: 'High load / stress behavior' },
+    'load-100-users': { total: 100, steady: '10m', purpose: 'Stress / breaking-point observation' },
+};
+
+export function isRoleScenario(name) {
+    return name === 'load-roles' || Object.prototype.hasOwnProperty.call(ROLE_LOAD_PROFILES, name);
+}
+
+export function roleScenarioEnvironment(env, name) {
+    const profile = ROLE_LOAD_PROFILES[name];
+    if (!profile) return env;
+    const [merchandiser, inventory] = ROLE_ALLOCATIONS[profile.total];
+    // Named files pin their requested load and steady duration, independently of dotenv overrides.
+    return { ...env, ROLE_TOTAL_VUS: String(profile.total), ROLE_MERCHANDISER_VUS: String(merchandiser),
+        ROLE_INVENTORY_VUS: String(inventory), ROLE_STEADY: profile.steady };
+}
 
 export function configuredThinkRanges(env) {
     const ranges = { login: [0.5, 2], style: [0.5, 2], techpack: [30, 45], sample: [0.5, 2],
@@ -23,12 +43,12 @@ export function roleConfig(env) {
         if (!Number.isFinite(n) || n < min || n > max) throw new Error(`Invalid ${key}`);
         return n;
     };
-    const total = number('ROLE_TOTAL_VUS', 10, 2, 50);
+    const total = number('ROLE_TOTAL_VUS', 10, 2, 100);
     const allocation = ROLE_ALLOCATIONS[total];
-    const merchandiser = number('ROLE_MERCHANDISER_VUS', allocation?.[0], 1, 49);
-    const inventory = number('ROLE_INVENTORY_VUS', allocation?.[1], 1, 49);
+    const merchandiser = number('ROLE_MERCHANDISER_VUS', allocation?.[0], 1, 99);
+    const inventory = number('ROLE_INVENTORY_VUS', allocation?.[1], 1, 99);
     if (![total, merchandiser, inventory].every(Number.isInteger) || merchandiser + inventory !== total) {
-        throw new Error('Role VUs must be integers summing to ROLE_TOTAL_VUS (maximum 50)');
+        throw new Error('Role VUs must be integers summing to ROLE_TOTAL_VUS (maximum 100)');
     }
     const duration = (key, fallback, allowZero = false) => {
         const value = env[key] || fallback;

@@ -84,7 +84,7 @@ test('429 without Retry-After waits for a bounded throttle cooldown, not the int
 });
 
 test('k6 loads arrival rate and sequential verification options without network requests', () => {
-    for (const name of ['load-arrival-rate', 'login-all-users']) {
+    for (const name of ['load-arrival-rate', 'test-scenarios/login-all-users']) {
         const result = spawnSync('k6', ['inspect', '--include-system-env-vars', `k6/scenarios/${name}.js`], {
             encoding: 'utf8',
             env: {

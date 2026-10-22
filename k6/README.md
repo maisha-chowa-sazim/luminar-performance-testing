@@ -57,21 +57,23 @@ These scenarios create persistent records and upload objects. The API currently 
 
 ## Performance profiles
 
-Each profile runs the full style → sample → tech pack/upload → BOM → costing → purchase order → work order → item receipt journey. VUs represent concurrent journeys using shared role accounts, not distinct users. A three-second pause follows every finished attempt; set `THINK_TIME_SECONDS` to adjust it.
+Each named profile runs independent Merchandiser/Inventory scenarios, with distinct business accounts and a shared Senior Merchandiser supporting approval account. The current workflow creates style → techpack/uploads → sample → BOM → costing → purchase order → work order → verified receipt. Human pauses use the role-based defaults, not the legacy journey sleep.
 
-The requested table has five load levels, all covered below. Durations **include** ramp-up and ramp-down. Graceful completion can add up to two minutes; it may also allow retiring VUs to finish during ramp-down.
+| Command | Entrypoint | Merchandiser + Inventory | Ramp up | Steady load | Producer ramp down |
+| --- | --- | --- | --- | --- | --- |
+| `npm run test:load:5` | `scenarios/load-5-users.js` | 4 + 1 | 2 min | 10 min | 2 min |
+| `npm run test:load:10` | `scenarios/load-10-users.js` | 8 + 2 | 2 min | 15 min | 2 min |
+| `npm run test:load:20` | `scenarios/load-20-users.js` | 16 + 4 | 2 min | 20 min | 2 min |
+| `npm run test:load:50` | `scenarios/load-50-users.js` | 40 + 10 | 2 min | 15 min | 2 min |
+| `npm run test:load:100` | `scenarios/load-100-users.js` | 80 + 20 | 2 min | 10 min | 2 min |
 
-| Command | VUs | Ramp up | Steady load | Ramp down | Scheduled total |
-| --- | ---: | --- | --- | --- | --- |
-| `npm run test:load:5` | 5 | 1 min | 3 min | 1 min | 5 min |
-| `npm run test:loads:10` | 10 | 2 min | 14 min | 2 min | 18 min |
-| `npm run test:loads:20` | 20 | 2 min | 6 min | 2 min | 10 min |
-| `npm run test:loads:50` | 50 | 2 min | 4 min | 2 min | 8 min |
-| `npm run test:loads:100` | 100 | 1 min | 3 min | 1 min | 5 min |
+Requested durations are steady intervals, not total wall time. Producer grace (default 10m), Inventory drain (5m), its final ramp-down, setup authentication, and reporting extend execution. Named entrypoints pin their role allocation and steady period over dotenv values. Other `ROLE_*` controls remain configurable. Use `load-roles` for a fully custom schedule.
 
-Configuration lives in `config/performance.js`; each scenario has its own entrypoint in `scenarios/load-<users>-users.js`. The default acceptance criteria are HTTP failures <1%, regular API HTTP p95 <2000ms, p99 <2000ms, checks >99%, journey success >99%, and at least one started and successfully completed journey. These are **provisional SLOs**, not agreed business requirements. Stress profiles keep the same criteria to expose degradation.
+Configuration lives in `config/role-load.mjs`; lifecycle code is shared in `helpers/role-scenario.js`. Always run these through `node k6/reporting/run.mjs <scenario>` or npm, rather than plain `k6 run`, so the coordinator is available. The 100-VU cap includes the sum of both role peaks; it does not include the shared supporting account as another VU. All selected business identities must be distinct. Missing or insufficient credentials fail before business traffic.
 
-Performance setup requires `BASE_URL`, `LUMINAR_FACTORY_ID`, `LUMINAR_ORGANIZATION_ID`, `LUMINAR_BUYER_ID`, plus `_EMAIL` and `_PASSWORD` for each of `MERCHANDISER`, `EXECUTIVE`, `SENIOR_MERCHANDISER` and `INVENTORY`. Use locally supplied credentials. Verify fixture IDs/dates and restore the disposable test dataset between runs; see [QA review](../docs/k6-qa-review.md).
+Targets: regular API p95/p99 <2s; techpack p95 <30s / p99 <45s; application HTTP failures <1%; verified completion >=99%; nonzero attempted/received workflows; zero quantity, duplicate-success, integrity, or coordinator errors. Reported RPS uses `http_reqs{traffic:application,workload:api}` only. Techpack requests, setup, and coordination are excluded from the count; the elapsed-time denominator still includes uploads, thinking, ramps, and drain. Older summaries without this scoped counter show N/A.
+
+Setup requires explicit tenant/base URL/payment-provider configuration, appropriate business-role pools and the Senior Merchandiser credential pair. Verify fixtures, dates, permissions, and the QA seed state before running. See the [role-based guide](../docs/role-based-load-testing.md).
 
 ## Automatic HTML reports
 

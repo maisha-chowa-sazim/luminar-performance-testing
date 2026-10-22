@@ -67,15 +67,18 @@ test('reports separate regular API latency from techpack latency without changin
 test('headline throughput uses application scope and preserves unknown historical measurements', () => {
     const current=structuredClone(summary);
     current.metrics['http_reqs{traffic:application}']={values:{count:60,rate:1.2}};
+    current.metrics['http_reqs{traffic:application,workload:api}']={values:{count:45,rate:0.9}};
+    current.metrics['http_reqs{traffic:application,workload:techpack}']={values:{count:15,rate:0.3}};
     current.metrics['http_req_duration{traffic:application}'].values.avg=1800;
     const model=presentationModel(current,{...metadata,roleConfiguration:{...metadata.roleConfiguration,thinkScale:0}},'FAIL');
-    assert.equal(model.cards.find(card=>card[0]==='Requests per second (RPS)')[1],'1.2 req/s');
+    assert.equal(model.cards.find(card=>card[0]==='Requests per second (RPS)')[1],'0.9 req/s');
     assert.equal(model.cards.find(card=>card[0]==='Application requests measured')[1],'60');
     assert.equal(model.cards.find(card=>card[0]==='Average response time')[1],'1.8 s');
     assert.equal(model.allTraffic.count,100);
     assert.equal(model.pacing,'Human think time disabled');
     const historical=presentationModel(summary,metadata,'FAIL');
     assert.equal(historical.cards.find(card=>card[0]==='Requests per second (RPS)')[1],'N/A req/s');
+    assert.match(model.cards.find(card=>card[0]==='Requests per second (RPS)')[2], /excludes techpack, setup, and coordinator/);
     assert.equal(historical.pacing,'Not recorded');
     const html=renderHtml(model);
     assert.match(html,/About 95% of requests are this fast or faster/);

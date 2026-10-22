@@ -1,6 +1,6 @@
 # Independent concurrent role load tests
 
-`k6/scenarios/load-roles.js` implements Approach B: Merchandiser and Inventory run as independent `ramping-vus` scenarios. Existing full-journey and arrival-rate scenarios remain available with their original behavior. The `test:load:5` and `test:loads:10/20/50` npm commands also select this role-based scenario. Separate per-user load files and partial linked-journey entrypoints were removed; feature smoke tests remain available for diagnosis.
+`k6/scenarios/load-roles.js` implements Approach B: Merchandiser and Inventory run as independent `ramping-vus` scenarios. Existing full-journey and arrival-rate scenarios remain available with their original behavior. The `test:load:5` and `test:load:10/20/50` npm commands select their matching named role-load scenario. `test:load:100` selects 80 Merchandiser + 20 Inventory VUs. Five named load files (`load-5-users`, `load-10-users`, `load-20-users`, `load-50-users`, `load-100-users`) now share the role lifecycle; feature smoke tests remain available for diagnosis.
 
 ## Workflows and handoff
 
@@ -66,13 +66,13 @@ Run from the repository root after installing pinned dependencies with `npm ci` 
 npm run test:roles:smoke
 
 # 8 Merchandisers + 2 Inventory:
-npm run test:loads:10
+npm run test:load:10
 
 # 16 Merchandisers + 4 Inventory:
-npm run test:loads:20
+npm run test:load:20
 
 # 40 Merchandisers + 10 Inventory, 15-minute steady phase:
-npm run test:loads:50
+npm run test:load:50
 ```
 
 Validate handoff at low load, then 10 → 20 → 50 separately after failures and data conditions are understood. These commands are alternatives, not an automatic sequence. A successful tiny smoke does not establish 50-VU capacity.
@@ -90,7 +90,7 @@ ROLE_TOTAL_VUS=20 ROLE_MERCHANDISER_VUS=15 ROLE_INVENTORY_VUS=5 \
 node --env-file=.env.qa k6/reporting/run.mjs load-roles
 
 # Dashboard HTML export without opening a live dashboard server:
-K6_WEB_DASHBOARD_PORT=-1 npm run test:loads:10
+K6_WEB_DASHBOARD_PORT=-1 npm run test:load:10
 ```
 
 Use `ROLE_*` settings rather than `K6_VUS`, `K6_STAGES`, segmentation, or other workload overrides. The runner rejects those overrides for this scenario. Direct `k6 run` lacks the coordinator lifecycle; use the Node/npm runner.
@@ -99,8 +99,8 @@ Use `ROLE_*` settings rather than `K6_VUS`, `K6_STAGES`, segmentation, or other 
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `ROLE_TOTAL_VUS` | `10` | Combined peak, integer 2–50 |
-| `ROLE_MERCHANDISER_VUS`, `ROLE_INVENTORY_VUS` | For total 2/5/10/20/50: 1+1 / 4+1 / 8+2 / 16+4 / 40+10 | Explicit positive integers required for other totals; sum must match total |
+| `ROLE_TOTAL_VUS` | `10` | Combined peak, integer 2–100 |
+| `ROLE_MERCHANDISER_VUS`, `ROLE_INVENTORY_VUS` | For total 2/5/10/20/50/100: 1+1 / 4+1 / 8+2 / 16+4 / 40+10 / 80+20 | Explicit positive integers required for other totals; sum must match total |
 | `ROLE_RAMP_UP`, `ROLE_STEADY`, `ROLE_RAMP_DOWN` | `2m`, `15m`, `2m` | Producer schedule; total 2 defaults to `1s`, `10m`, `1s` unless overridden by the smoke command |
 | `ROLE_GRACE`, `ROLE_DRAIN` | `10m`, `5m` | Maximum producer completion grace and extra Inventory drain time |
 | `ROLE_RUN_ID` | Generated UUID-based ID | 1–40 letters/digits/hyphens; fresh identifiers recommended |
@@ -112,7 +112,7 @@ Use `ROLE_*` settings rather than `K6_VUS`, `K6_STAGES`, segmentation, or other 
 | `ROLE_HTTP_FAILURE_RATE` | `0.01` | Application HTTP failure rate must be below this value |
 | `ROLE_COMPLETION_RATE` | `0.99` | Receipt-verified workflows / all attempted workflows must be at least this value |
 
-Each scenario's peak is bounded by its role allocation; the two peaks sum to at most 50, including retiring VUs. Inventory stays at its allocated count through producer ramp-down, producer grace, and drain before ramping down itself. This maintains consumers while producers finish. Any remaining backlog still counts as unreceived; draining does not redefine it as success.
+Each scenario's peak is bounded by its role allocation; the two peaks sum to at most 100, including retiring VUs. Inventory stays at its allocated count through producer ramp-down, producer grace, and drain before ramping down itself. This maintains consumers while producers finish. Any remaining backlog still counts as unreceived; draining does not redefine it as success.
 
 Configure randomized human delays with `ROLE_THINK_<ACTION>_MIN` and `ROLE_THINK_<ACTION>_MAX`, in seconds:
 
@@ -166,3 +166,11 @@ Live validation still requires QA confirmation of the retained costing route/mas
 Techpack upload-URL generation, file uploads, and creation are tagged `workload:techpack`. Their configurable per-request latency targets are p95 < 30s and p99 < 45s (`ROLE_TECHPACK_P95_MS=30000`, `ROLE_TECHPACK_P99_MS=45000`). Regular API requests use `workload:api` and retain p95 < 2s / p99 < 2s. All application requests, including uploads, remain subject to the HTTP failure-rate gate. These are provisional request-latency budgets, not total multi-file workflow duration targets. Historical reports retain their original acceptance rules. Work-order approval and supplier transition are restored; this revision has not been rerun against QA.
 
 Setup authenticates one existing senior-merchandiser account (`SENIOR_MERCHANDISER_EMAIL` / `SENIOR_MERCHANDISER_PASSWORD`) in addition to the business-role pools. This shared supporting session performs work-order approval and supplier transitions inside Merchandiser VUs and does not add concurrent VUs. No executive account is required.
+
+## Named profile schedules and API RPS
+
+The five named scenario files pin 5/10/20/50/100 VUs and 10m/15m/20m/15m/10m steady periods respectively. See the [run guide](../k6/README.md#performance-profiles) for commands and role allocation. Ramps, grace, drain, and setup are additional. Generic `load-roles` remains configurable.
+
+For 100 VUs, provision at least 80 distinct Merchandiser and 20 distinct Inventory accounts, plus the existing Senior Merchandiser supporting account. The current local declared 50/12 pool is insufficient. Account validation stops before k6 business execution when requirements are not met; no credentials are created by these profiles.
+
+The main report RPS now uses regular API requests only (`traffic:application,workload:api`). Do not substitute aggregate HTTP rate when this counter is absent. Techpack creation/transfers remain part of the workflow and elapsed time, but not the request count behind this RPS card. This is observed API throughput under the configured journey and pacing.

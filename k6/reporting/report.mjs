@@ -69,7 +69,7 @@ export function reportModel(summary, metadata) {
     if (metadata.roleConfiguration) {
         const config = metadata.roleConfiguration, handoff = metadata.roleHandoff || {};
         sections.splice(3, 0, ['Independent roles and handoff', [
-            `Run identifier: ${metadata.runId}; ${config.merchandiser} Merchandiser + ${config.inventory} Inventory VUs (cap 50).`,
+            `Run identifier: ${metadata.runId}; ${config.merchandiser} Merchandiser + ${config.inventory} Inventory VUs (cap 100).`,
             `Workflows attempted: ${handoff.attempted ?? 'N/A'}; Merchandiser completed: ${values('merchandiser_completed').count ?? 0}; failed: ${values('merchandiser_failed').count ?? 0}; success: ${percent(values('merchandiser_success').rate)}.`,
             `Work orders created: ${handoff.created ?? 'N/A'}; ready: ${handoff.ready ?? 'N/A'}; currently claimed: ${handoff.claimed ?? 'N/A'}; received and verified: ${handoff.received ?? 'N/A'}; failed: ${handoff.failed ?? 'N/A'}; unreceived backlog (includes failed/claimed): ${handoff.pending ?? 'N/A'}.`,
             `End-to-end completion against ALL attempted workflows: ${handoff.attempted ? percent(handoff.received / handoff.attempted) : 'N/A'}; Inventory success: ${percent(values('inventory_success').rate)}; failed receiving attempts: ${values('inventory_failed').count ?? 0}.`,

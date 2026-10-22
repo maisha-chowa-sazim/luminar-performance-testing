@@ -12,7 +12,7 @@ The foundation is largely implemented. Remaining work should preserve reusable f
 
 - Keep Merchandiser and Inventory as the load personas, with Senior Merchandiser supporting work-order approval and supplier transition.
 - Resolve whether the two-second expectation becomes a hard maximum for a defined request timing metric or remains a percentile target. Retain and disclose current gates until deliberately changed; confirm the separate tech-pack allowance.
-- Reconcile active run instructions with existing scenario entrypoints, the 50-VU role cap, and current HTML/JSON outputs.
+- Reconcile active run instructions with existing scenario entrypoints, the 100-VU role cap, and current HTML/JSON outputs.
 
 **Exit:** the workload, timing metric, acceptance rules, and runnable instructions are explicit and consistent. Any changes to thresholds are recorded before subsequent comparisons.
 
@@ -38,11 +38,11 @@ The foundation is largely implemented. Remaining work should preserve reusable f
 
 ## Phase 4 — Implement 100-user role-load support
 
-**Status: planned; currently blocked by the implemented 50-VU limit.**
+**Status: 100-user scenario/configuration support implemented; account provisioning and live measurement remain outstanding.**
 
-- Extend shared configuration and all relevant validations together; define the 100-user role split and schedule. Validate the proposed 80 Merchandiser + 20 Inventory allocation and provision enough distinct QA identities.
+- Shared limits, named profiles, runner preflight, and offline checks now support 80 Merchandiser + 20 Inventory VUs. Provision those distinct QA identities before execution.
 - Check coordinator behavior, handoff/drain behavior, session handling, upload resource use, and generator headroom at the new scale. Preserve atomic claims, no write replay, and receipt-integrity gates.
-- Extend meaningful offline checks and document the new runner command. Do not use a legacy profile entry or an environment override to bypass the existing cap.
+- Named files and commands now cover all five levels, with 10/15/20/15/10-minute steady periods. Verify the selected profile and do not bypass account/preflight checks.
 - After implementation verification and lower-load review, measure 100 users as a separately selected QA run and deliver the same evidence as other levels.
 
 **Exit:** 100 users are supported by configuration, accounts, runner, tests, and documentation, with an actual measured result or a clearly recorded remaining execution blocker. This level remains incomplete until measured.

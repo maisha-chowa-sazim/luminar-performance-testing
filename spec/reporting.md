@@ -32,7 +32,7 @@ Remove the title links for the original k6 dashboard, summary data, and handoff 
 
 ## Interpretation
 
-RPS is observed traffic per elapsed second, not simultaneous requests or maximum capacity. Application-scoped rates exclude setup/coordinator requests from the count. Human pauses affect RPS but not individual HTTP durations. Rates and percentiles describe the whole run, including ramps and drain. Do not infer no-pause throughput or steady-state capacity from aggregates. Historical metrics not captured must show N/A.
+RPS is observed traffic per elapsed second, not simultaneous requests or maximum capacity. The headline RPS uses the regular API scoped request counter and excludes techpack, setup, and coordinator requests from the count. It retains the whole-run elapsed-time denominator, including upload and think time; it is not a reconstructed no-upload rate. Human pauses affect RPS but not individual HTTP durations. Rates and percentiles describe the whole run, including ramps and drain. Do not infer no-pause throughput or steady-state capacity from aggregates. Historical metrics not captured must show N/A.
 
 Keep Avg diagnostic alongside percentiles; show request sample counts and error rates, and never average percentiles across runs. A slow endpoint is an observation, not a confirmed root cause. Selected status counters include throttling (429); expected/unexpected response timings do not replace business checks.
 
