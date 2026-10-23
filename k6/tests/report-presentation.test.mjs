@@ -7,6 +7,38 @@ import { presentationModel, renderHtml } from '../reporting/presentation.mjs';
 import { writeReports } from '../reporting/report.mjs';
 import { runTestType, testType, testTypeSlug, testTypeLabel } from '../reporting/test-type.mjs';
 
+test('workflow retains three columns and effective think times below VU distribution', () => {
+    const meta = { ...metadata, roleConfiguration: { ...metadata.roleConfiguration, thinkScale: 1 },
+        roleThinkRanges: { techpack: [30, 45], discover: [.5, 2] } };
+    const html = renderHtml(presentationModel(summary, meta, 'FAIL'));
+    const workflow = html.match(/<section><h2>Workflow and think time[\s\S]*?<\/section>/)[0];
+    assert.match(workflow, /<th>Role<\/th><th>Workflow step<\/th><th>Think time<\/th>/);
+    assert.doesNotMatch(workflow, /<th>Behaviou?r<\/th>/);
+    assert.match(workflow, /30–45 s/);
+    assert.match(workflow, /0.5–2 s/);
+    assert.match(workflow, /new setting; not applied in this saved run/);
+    assert.ok(html.indexOf('<h2>Workflow and think time') > html.indexOf('<h2>VU distribution'));
+    assert.ok(html.indexOf('<h2>Workflow and think time') < html.indexOf('<h2>Response-time distribution'));
+});
+
+test('upload error evidence includes file, message, counts, and developer actions', () => {
+    const html = renderHtml(presentationModel(summary, { ...metadata,
+        uploadFailureSource: 'Terminal log',
+        uploadFailures: [{ fileName: '<file>.psd', count: 3, httpStatus: 0, message: 'request timeout', errorCode: null }],
+    }, 'FAIL'));
+    assert.match(html, /Techpack upload errors/);
+    assert.match(html, /&lt;file&gt;.psd/);
+    assert.match(html, /request timeout/);
+    assert.doesNotMatch(html, /Developer actions/);
+    assert.match(html, /<span class="error-message">request timeout<\/span>/);
+    assert.match(html, /\.error-message\{color:#b91c1c/);
+    const future = renderHtml(presentationModel(summary, { ...metadata,
+        roleFailures: [{ step: 'tech_pack_create', uploadFailure: { fileName: 'future.psd', httpStatus: 0, message: 'request timeout' } }],
+    }, 'FAIL'));
+    assert.match(future, /future.psd/);
+    assert.match(future, /Techpack upload errors/);
+});
+
 const metadata = { scenario:'load-roles', exitCode:99, roleConfiguration:{total:2,merchandiser:1,inventory:1,completion:.99,apiP95:2000,apiP99:5000,httpFailure:.01},roleHandoff:{attempted:1,created:1,received:1,failed:0,pending:0,duplicateAttempts:0} };
 const summary = { metrics: {
     http_reqs:{values:{count:100,rate:2}},
@@ -172,4 +204,12 @@ test('header shows date and production environment without the verdict sentence'
     assert.match(html, /<p>PROD ENV: https:\/\/app.luminarbd.com<\/p>/);
     const header = html.match(/<header>[\s\S]*?<\/header>/)[0];
     assert.doesNotMatch(header, /Receiving completed successfully|Performance acceptance targets were missed/);
+});
+
+
+test('header duration uses measured k6 elapsed time and follows the title', () => {
+    for (const [milliseconds, label] of [[2222437.475, '37m 2s'], [3661000, '1h 1m 1s'], [0, '0s'], [undefined, 'N/A']]) {
+        const html = renderHtml(presentationModel({ ...summary, state: { testRunDurationMs: milliseconds } }, metadata, 'FAIL'));
+        assert.ok(html.includes(`</h1><p>Duration: ${label}</p><p>Date:`));
+    }
 });

@@ -23,7 +23,8 @@ export function roleScenarioEnvironment(env, name) {
 
 export function configuredThinkRanges(env) {
     const ranges = { login: [0.5, 2], style: [0.5, 2], techpack: [30, 45], sample: [0.5, 2],
-        bom: [0.5, 2], costing: [0.5, 2], purchase: [0.5, 2], discover: [0.5, 2] };
+        bom: [0.5, 2], costing: [0.5, 2], purchase: [0.5, 2], discover: [0.5, 2], workorder: [0.5, 2],
+        approval: [0.5, 2], handoff: [0.5, 2], receipt: [0.5, 2] };
     return Object.fromEntries(Object.entries(ranges).map(([step, defaults]) => {
         const values = ['MIN', 'MAX'].map((bound, i) => Number(env[`ROLE_THINK_${step.toUpperCase()}_${bound}`] ?? defaults[i]));
         if (!values.every(n => Number.isFinite(n) && n >= 0) || values[0] > values[1]) throw new Error(`Invalid think-time range for ${step}`);

@@ -135,7 +135,7 @@ try {
         const ledger = coordinator.snapshot();
         metadata.roleHandoff = ledger.stats;
         metadata.roleFailures = [...ledger.workflows, ...ledger.orders].filter(value => value.state === 'failed')
-            .map(value => ({ id: value.id, step: value.step, kind: value.kind, httpStatus: value.httpStatus, errorCode: value.errorCode }));
+            .map(value => ({ id: value.id, step: value.step, kind: value.kind, httpStatus: value.httpStatus, errorCode: value.errorCode, uploadFailure: value.uploadFailure }));
         metadata.profile = `Independent roles: ${roleConfiguration.merchandiser} Merchandiser + ${roleConfiguration.inventory} Inventory VUs; ramp ${roleConfiguration.rampUp}, steady ${roleConfiguration.steady}, ramp-down ${roleConfiguration.rampDown}; producer grace ${roleConfiguration.grace}; drain ${roleConfiguration.drain}`;
     }
     await writeFile(path.join(directory, 'metadata.json'), JSON.stringify(metadata, null, 2));

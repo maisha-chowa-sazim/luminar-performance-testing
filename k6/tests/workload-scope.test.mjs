@@ -2,7 +2,30 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import vm from 'node:vm';
-import { roleConfig, roleOptions } from '../config/role-load.mjs';
+import { roleConfig, roleOptions, configuredThinkRanges } from '../config/role-load.mjs';
+
+test('upload timeout preserves file and transport details without signed URL credentials', () => {
+    let calls = 0;
+    const ctx = vm.createContext({
+        open: (_path, mode) => mode === 'b' ? new ArrayBuffer(1) : JSON.stringify({ files: [{ fileName: 'fixture.psd', contentType: 'image/vnd.adobe.photoshop' }] }),
+        check: (value, rules) => Object.values(rules).every(rule => rule(value)),
+        getApiUrl: path => path, tenantHeaders: () => ({}), console: { error() {} },
+        http: { post: () => ++calls === 1
+            ? { status: 201, json: () => ({ success: true, data: [{ fileName: 'fixture.psd', fileKey: 'secret-key', uploadUrl: 'https://storage.example.test/?signature=secret', fields: { policy: 'secret' } }] }) }
+            : { status: 0, error_code: 1050, error: 'request timeout' } },
+    });
+    vm.runInContext(readFileSync('k6/flows/tech-pack.js', 'utf8').replace(/^import [^\n]+\n/gm, '').replace(/^export /gm, ''), ctx);
+    assert.throws(() => ctx.createTechPack('token', 'style'), error => {
+        assert.equal(error.httpStatus, 0);
+        assert.equal(error.errorCode, 1050);
+        assert.equal(error.uploadFailure.fileName, 'fixture.psd');
+        assert.equal(error.uploadFailure.message, 'request timeout');
+        assert.equal(error.uploadFailure.errorCode, 1050);
+        assert.doesNotMatch(JSON.stringify(error), /secret|signature/);
+        return true;
+    });
+    assert.equal(calls, 2);
+});
 
 test('only work-order approval and its supporting role are included', () => {
     for (const folder of ['k6/flows','k6/scenarios','k6/helpers']) for (const file of readdirSync(folder).filter(file=>file.endsWith('.js') || file.endsWith('.mjs'))) {
@@ -36,7 +59,7 @@ test('every request in techpack creation overrides the default API workload tag'
 test('work-order approval and supplier status precede handoff; failed approval prevents handoff', () => {
     const calls=[], Metric=class {add(){}};
     const response=data=>({status:201,json:()=>({success:true,data})});
-    const ctx=vm.createContext({__ENV:{},Counter:Metric,Rate:Metric,Trend:Metric,sleep(){},think(){},
+    const ctx=vm.createContext({__ENV:{},Counter:Metric,Rate:Metric,Trend:Metric,sleep(){},think(step){calls.push(`think:${step}`);},
         execution:{vu:{idInTest:1}},uniqueId:()=> 'synthetic',console:{warn:message=>assert.fail(message)},
         operation:(_name,fn)=>fn(),responseData:(r,status)=>{if(r.status!==status)throw Error('HTTP failure');return r.json().data;},
         requireCondition:(ok,step)=>assert.ok(ok,step),
@@ -53,6 +76,10 @@ test('work-order approval and supplier status precede handoff; failed approval p
     vm.runInContext(readFileSync('k6/flows/role-journeys.js','utf8').replace(/import[\s\S]*?from '[^']+';\n/g,'').replace(/^export /gm,''),ctx);
     ctx.merchandiserJourney({runId:'synthetic',startedAt:Date.now(),config:roleConfig({})});
     assert.ok(calls.includes('/ready'));
+    assert.ok(calls.indexOf('think:workorder') < calls.indexOf('approve'));
+    assert.ok(calls.indexOf('think:approval') > calls.indexOf('supplier'));
+    assert.ok(calls.indexOf('think:approval') < calls.indexOf('/ready'));
+    assert.ok(calls.indexOf('think:handoff') > calls.indexOf('/ready'));
     assert.ok(!calls.includes('/failed'));
     assert.ok(calls.indexOf('approve') < calls.indexOf('supplier'));
     assert.ok(calls.indexOf('supplier') < calls.indexOf('/ready'));
@@ -61,4 +88,13 @@ test('work-order approval and supplier status precede handoff; failed approval p
     assert.ok(calls.includes('/failed'));
     assert.ok(!calls.includes('/ready'));
     assert.ok(!calls.includes('supplier'));
+});
+
+
+test('new workflow think ranges default to 0.5–2 seconds and accept overrides', () => {
+    const ranges = configuredThinkRanges({});
+    for (const step of ['workorder', 'approval', 'handoff', 'receipt']) {
+        assert.deepEqual(ranges[step], [0.5, 2]);
+        assert.deepEqual(configuredThinkRanges({ [`ROLE_THINK_${step.toUpperCase()}_MIN`]: '1', [`ROLE_THINK_${step.toUpperCase()}_MAX`]: '3' })[step], [1, 3]);
+    }
 });

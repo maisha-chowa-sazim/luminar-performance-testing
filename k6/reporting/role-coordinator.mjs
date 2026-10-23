@@ -2,6 +2,10 @@ import { createServer } from 'node:http';
 import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { writeFileSync, renameSync } from 'node:fs';
 
+export function isDiagnosticCode(value) {
+    return value === 'FEATURE_DISABLED' || (Number.isInteger(value) && value > 0);
+}
+
 // Single local runner owns this durable, serialized ledger. No k6 global mutable state.
 export async function startRoleCoordinator(directory, runId, config) {
     const secret = randomUUID();
@@ -46,7 +50,8 @@ export async function startRoleCoordinator(directory, runId, config) {
             const workflow = workflows.get(body.id);
             if (!workflow) reject(404, 'Workflow missing');
             workflow.state = 'failed'; workflow.step = body.step; workflow.kind = body.kind; workflow.httpStatus = body.httpStatus;
-            if (body.errorCode === 'FEATURE_DISABLED') workflow.errorCode = body.errorCode;
+            if (isDiagnosticCode(body.errorCode)) workflow.errorCode = body.errorCode;
+            if (body.uploadFailure) workflow.uploadFailure = body.uploadFailure;
             persist(); return { ok: true };
         }
         if (path === '/workflow-progress') {
@@ -86,7 +91,7 @@ export async function startRoleCoordinator(directory, runId, config) {
             if (order.state === 'received') reject(409, 'Received order cannot fail');
             if (order.state === 'claimed' && (order.claim !== body.claim || order.owner !== body.owner)) reject(409, 'Claim mismatch');
             order.state = 'failed'; order.step = body.step; order.kind = body.kind; order.httpStatus = body.httpStatus;
-            if (body.errorCode === 'FEATURE_DISABLED') order.errorCode = body.errorCode;
+            if (isDiagnosticCode(body.errorCode)) order.errorCode = body.errorCode;
             // Preserve known partial effects, without response bodies or session material.
             order.grnId = body.grnId || null; order.receiptDispatched = body.receiptDispatched === true;
             persist(); return { ok: true };

@@ -68,19 +68,19 @@ export function merchandiserJourney(data) {
         const order = create('work_order_create', () => createWorkOrder(session.token, purchase.id, style.id));
         orderId = order.id;
         coordinate('/orders', { id: orderId, workflowId, styleId: style.id, purchaseOrderId: purchase.id });
-        createdOrders.add(1);
+        createdOrders.add(1); think('workorder', config);
         const senior = sessionFor(data, 'seniorMerchandiser', 0, config);
         at('approval_work_order', () => responseData(approveWorkOrder(senior.token, orderId), 201, step, senior));
-        at('work_order_sent_to_supplier', () => responseData(sendWorkOrderToSupplier(senior.token, orderId), 200, step, senior));
+        at('work_order_sent_to_supplier', () => responseData(sendWorkOrderToSupplier(senior.token, orderId), 200, step, senior)); think('approval', config);
         const ready = at('work_order_get', () => readApplication(`/api/v1/work-orders/${orderId}`, 'work_order_get', session, config,
             value => value.status === 'SENT_TO_SUPPLIER'));
         validateOrder(ready, { id: orderId, styleId: style.id, purchaseOrderId: purchase.id });
-        at('handoff_ready', () => coordinate('/ready', { id: orderId }));
+        at('handoff_ready', () => coordinate('/ready', { id: orderId })); think('handoff', config);
         merchantCompleted.add(1); ok = true;
     } catch (error) {
         step = error.step || step;
         merchantFailed.add(1); failures.add(1, { role: 'merchandiser', step });
-        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus || null, errorCode: error.errorCode };
+        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus ?? null, errorCode: error.errorCode, uploadFailure: error.uploadFailure };
         console.warn(`Merchandiser workflow failed at ${step} (${diagnostic.kind}); details retained in run ledger`);
         if (started) coordinate('/workflow-failed', { id: workflowId, step, ...diagnostic });
         if (orderId) coordinate('/failed', { id: orderId, step, ...diagnostic });
@@ -161,13 +161,13 @@ export function inventoryJourney(data) {
         if (receipts.meta?.total > 1) duplicateReceipts.add(receipts.meta.total - 1);
         requireCondition(receipts.meta?.total === 1 && receipts.data?.length === 1 && receipts.data[0].id === grnId,
             'exactly_one_successful_receipt', 'integrity');
-        at('handoff_finish', () => coordinate('/finish', { id: claim.id, owner, claim: claim.claim, grnId }));
+        at('handoff_finish', () => coordinate('/finish', { id: claim.id, owner, claim: claim.claim, grnId })); think('receipt', config);
         inventoryCompleted.add(1);
         ok = true;
     } catch (error) {
         step = error.step || step;
         inventoryFailed.add(1); failures.add(1, { role: 'inventory', step });
-        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus || null, errorCode: error.errorCode };
+        const diagnostic = { kind: error.kind || 'script_or_polling', httpStatus: error.httpStatus ?? null, errorCode: error.errorCode, uploadFailure: error.uploadFailure };
         console.warn(`Inventory workflow failed at ${step} (${diagnostic.kind}); do not replay receipt without reconciliation`);
         if (claim) coordinate('/failed', { id: claim.id, owner, claim: claim.claim, step, grnId, receiptDispatched, ...diagnostic });
         if (__ENV.ROLE_STOP_ON_ERROR === '1') execution.test.abort(`Inventory failed at ${step} (${diagnostic.kind})`);

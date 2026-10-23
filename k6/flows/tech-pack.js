@@ -74,7 +74,7 @@ export function createTechPack(token, styleId) {
 
     if (!uploadUrlsOk) {
         console.error(`Tech pack upload URL request failed: ${uploadUrlsResp.status} [response redacted]`);
-        return null;
+        return uploadUrlsResp;
     }
 
     const uploadInfos = uploadUrlsResp.json()?.data;
@@ -103,7 +103,16 @@ export function createTechPack(token, styleId) {
 
         if (!uploadOk) {
             console.error(`Tech pack file upload failed for ${file.fileName}: ${uploadResp.status} [response redacted]`);
-            return null;
+            const message = uploadResp.status === 0
+                ? (uploadResp.error_code === 1050 || /timeout/i.test(uploadResp.error || '') ? 'request timeout' : 'Upload transport failure; no HTTP response received')
+                : `Storage upload returned HTTP ${uploadResp.status}`;
+            throw Object.assign(new Error(message), {
+                kind: uploadResp.status === 0 ? 'transport_or_script' : 'storage_upload',
+                httpStatus: uploadResp.status,
+                errorCode: Number.isInteger(uploadResp.error_code) && uploadResp.error_code > 0 ? uploadResp.error_code : undefined,
+                uploadFailure: { fileName: file.fileName, message, httpStatus: uploadResp.status,
+                    errorCode: uploadResp.error_code || null, count: 1 },
+            });
         }
 
         uploadedFiles.push({

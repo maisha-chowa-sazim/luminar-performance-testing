@@ -151,3 +151,10 @@ npm run test:reporting
 This creates clearly named `report-selftest-*` synthetic example reports under ignored `results/`. They are not application performance results.
 
 Regular application API latency targets are p95 < 2s and p99 < 2s. Techpack upload-URL generation, file transfer, and creation use separate provisional targets: p95 < 30s and p99 < 45s, configurable with `ROLE_TECHPACK_P95_MS` and `ROLE_TECHPACK_P99_MS`. Work-order approval and the supplier-status transition use the senior-merchandiser account before receiving. BOM, costing and purchase-order approvals/submissions remain excluded.
+
+Work-order creation, approval/send-to-supplier, handoff, and receipt verification
+each pause for 0.5–2 seconds by default. Override their ranges with
+`ROLE_THINK_WORKORDER_MIN/MAX`, `ROLE_THINK_APPROVAL_MIN/MAX`,
+`ROLE_THINK_HANDOFF_MIN/MAX`, and `ROLE_THINK_RECEIPT_MIN/MAX`
+(use separate `_MIN` and `_MAX` variables). `ROLE_THINK_SCALE` scales all
+pauses; smoke scripts set it to 0 to disable them.

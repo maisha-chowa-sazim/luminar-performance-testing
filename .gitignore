@@ -10,7 +10,8 @@ k6/results/
 
 # Environment
 .env
-.env.*
+.env.qa
+.env.prod
 
 # Node
 node_modules/

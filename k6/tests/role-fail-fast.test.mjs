@@ -2,11 +2,33 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { isDiagnosticCode } from '../reporting/role-coordinator.mjs';
 
 function source(file) {
     return readFileSync(file, 'utf8').replace(/import[\s\S]*?from ['"][^'"]+['"];\n/g, '').replace(/^export /gm, '');
 }
 class Metric { add() {} }
+
+test('transport and HTTP failure diagnostics preserve real statuses and numeric k6 codes', () => {
+    const ctx = vm.createContext({ Counter: Metric, Trend: Metric, check() {} });
+    vm.runInContext(source('k6/helpers/role-runtime.js'), ctx);
+    for (const [status, code, kind] of [[0, 1050, 'transport_or_script'], [503, 1503, 'backend'], [403, 1403, 'authentication_or_permission']]) {
+        assert.throws(() => ctx.responseData({ status, error_code: code, json: () => ({}) }, 201, 'upload'), error => {
+            assert.equal(error.httpStatus, status);
+            assert.equal(error.errorCode, code);
+            assert.equal(error.kind, kind);
+            assert.equal(isDiagnosticCode(error.errorCode), true);
+            return true;
+        });
+    }
+    assert.equal(isDiagnosticCode('private arbitrary response'), false);
+    assert.equal(isDiagnosticCode(undefined), false);
+    assert.throws(() => ctx.responseData(null, 201, 'upload'), error => {
+        assert.equal(error.httpStatus, null);
+        assert.equal(error.errorCode, undefined);
+        return true;
+    });
+});
 
 test('feature-disabled responses retain an allowlisted code without response contents', () => {
     const ctx = vm.createContext({ Counter: Metric, Trend: Metric, check() {} });
