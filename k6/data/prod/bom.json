@@ -1,0 +1,36 @@
+{
+  "fabricEntries": [
+    {
+      "itemName": "Main Fabric",
+      "itemType": "French Terry",
+      "gsm": 180,
+      "fabricColorType": "AOP",
+      "itemUse": ["Body"],
+      "finish": "ENZYME WASH",
+      "itemColor": "",
+      "compositions": [
+        { "fiberName": "Cotton", "percentage": "90" },
+        { "fiberName": "Linen", "percentage": "10" }
+      ],
+      "consumption": "0.5",
+      "consumptionUnit": "PER_PC"
+    }
+  ],
+  "bomEntries": [
+    {
+      "measurableItemId": "2cdbde32-7338-4b1f-b0eb-245546138960",
+      "measurementUnit": "pieces",
+      "variants": [],
+      "consumption": "0.5",
+      "consumptionUnit": "PER_PC"
+    },
+    {
+      "measurableItemId": "de9d38c7-294d-4241-806c-87e68cc542c5",
+      "measurementUnit": "pieces",
+      "variants": [],
+      "consumption": "0.5",
+      "consumptionUnit": "PER_PC"
+    }
+  ],
+  "status": "PENDING_APPROVAL"
+}

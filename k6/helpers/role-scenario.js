@@ -19,7 +19,7 @@ export function createRoleScenario(env) {
 
     function setup() {
         for (const key of ['BASE_URL', 'LUMINAR_FACTORY_ID', 'LUMINAR_ORGANIZATION_ID', 'LUMINAR_BUYER_ID',
-            'LUMINAR_PAYMENT_PROVIDER_ID', 'ROLE_RUN_ID', 'ROLE_COORDINATOR_URL', 'ROLE_COORDINATOR_KEY']) requiredEnvValue(key);
+            'LUMINAR_GARMENT_SIZE_TEMPLATE_ID', 'LUMINAR_PAYMENT_PROVIDER_ID', 'ROLE_RUN_ID', 'ROLE_COORDINATOR_URL', 'ROLE_COORDINATOR_KEY']) requiredEnvValue(key);
         const accounts = selectRoleAccounts(__ENV, users, config);
         const sessions = {};
         for (const [role, entries] of Object.entries(accounts)) {

@@ -1,4 +1,5 @@
 import { check } from 'k6';
+import { testEnvironment } from '../config/environment.mjs';
 import { login } from '../helpers/auth.js';
 import { createBom, getCreatedBomId } from '../flows/bom.js';
 import { createPreCosting, getCreatedPreCostingId } from '../flows/pre-costing.js';
@@ -109,7 +110,9 @@ function executeJourney(sessions) {
         return;
     }
 
-    const grnResponse = createReceiveItem(inventory.token, workOrderId, workOrderVariantId);
+    const grnResponse = createReceiveItem(inventory.token, workOrderId, testEnvironment(__ENV) === 'prod'
+        ? workOrderResponse.json().data.items.flatMap(item => item.variants.map(variant => variant.id))
+        : workOrderVariantId);
     return isSuccessful(grnResponse, 201);
 }
 

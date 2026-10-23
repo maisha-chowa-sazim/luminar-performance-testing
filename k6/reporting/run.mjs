@@ -9,11 +9,17 @@ import { startRoleCoordinator } from './role-coordinator.mjs';
 import { roleConfig, configuredThinkRanges, isRoleScenario, roleScenarioEnvironment } from '../config/role-load.mjs';
 import { selectRoleAccounts } from '../helpers/role-accounts.mjs';
 import { shipmentDate } from '../helpers/shipment-date.mjs';
+import { testEnvironment, purchaseFixturePath } from '../config/environment.mjs';
+import { runTestType, testTypeSlug } from './test-type.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 process.chdir(root);
 // Node's parser handles quoted dotenv values without executing shell code.
-if (existsSync('.env')) process.loadEnvFile('.env');
+const selectedEnvironment = testEnvironment(process.env);
+const envFile = selectedEnvironment ? `.env.${selectedEnvironment}` : '.env';
+if (selectedEnvironment && !existsSync(envFile)) throw new Error(`Missing environment file: ${envFile}`);
+if (existsSync(envFile)) process.loadEnvFile(envFile);
+if (testEnvironment(process.env) !== selectedEnvironment) throw new Error('Set TEST_ENV in the command, not inside an environment file');
 const args = process.argv.slice(2);
 const dashboardMode = args.includes('--dashboard');
 const scenarioArgs = args.filter(arg => arg !== '--dashboard');
@@ -32,10 +38,10 @@ if (isRoleScenario(scenario)) {
     roleConfiguration = roleConfig(runEnvironment);
     const users = JSON.parse(await readFile(path.join(root, 'k6/data/users.json'), 'utf8'));
     selectRoleAccounts(process.env, users, roleConfiguration);
-    for (const key of ['BASE_URL', 'LUMINAR_FACTORY_ID', 'LUMINAR_ORGANIZATION_ID', 'LUMINAR_BUYER_ID', 'LUMINAR_PAYMENT_PROVIDER_ID']) {
+    for (const key of ['BASE_URL', 'LUMINAR_FACTORY_ID', 'LUMINAR_ORGANIZATION_ID', 'LUMINAR_BUYER_ID', 'LUMINAR_GARMENT_SIZE_TEMPLATE_ID', 'LUMINAR_PAYMENT_PROVIDER_ID']) {
         if (!process.env[key]?.trim()) throw new Error(`${key} is required for independent role testing`);
     }
-    const purchase = JSON.parse(await readFile(path.join(root, 'k6/data/purchase.json'), 'utf8'));
+    const purchase = JSON.parse(await readFile(path.resolve(root, 'k6/flows', purchaseFixturePath(process.env)), 'utf8'));
     for (const shipment of purchase.shipments) shipmentDate(shipment.shipmentDate);
     if (['K6_VUS', 'K6_STAGES', 'K6_DURATION', 'K6_ITERATIONS', 'K6_SCENARIOS', 'K6_EXECUTION_SEGMENT', 'K6_EXECUTION_SEGMENT_SEQUENCE'].some(key => process.env[key])) {
         throw new Error('Use ROLE_* workload settings; K6 workload overrides/segmentation are unsupported for the 100-VU role cap');
@@ -46,7 +52,8 @@ if (isRoleScenario(scenario)) {
 const dashboardEnabled = dashboardMode || (process.env.K6_WEB_DASHBOARD === undefined
     ? scenario.startsWith('load-')
     : process.env.K6_WEB_DASHBOARD === 'true');
-const directory = path.join(root, 'k6/results', `${new Date().toISOString().replace(/[:.]/g, '-')}-${scenario.replaceAll('/', '-')}-${randomUUID().slice(0,8)}`);
+const executedTestType = runTestType(scenario, process.env, roleConfiguration);
+const directory = path.join(root, 'k6/results', `${testTypeSlug(executedTestType)}-${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID().slice(0,8)}`);
 await mkdir(directory, { recursive: true });
 const temporary = await mkdtemp(path.join(root, 'k6/scenarios/.report-'));
 const summaryPath = path.join(directory, 'summary.json');
@@ -56,7 +63,7 @@ const git = (...args) => spawnSync('git', args, { encoding: 'utf8' }).stdout?.tr
 let environment = 'unspecified';
 try { environment = new URL(process.env.BASE_URL).origin; } catch { /* Do not embed credentials or malformed URLs. */ }
 const metadata = {
-    scenario, environment, startedAt: new Date().toISOString(),
+    scenario, testType: executedTestType, environment, startedAt: new Date().toISOString(),
     revision: `${git('rev-parse', '--short', 'HEAD')}${git('status', '--porcelain') ? ' (dirty working tree)' : ''}`,
     k6Version: spawnSync('k6', ['version'], { encoding: 'utf8' }).stdout?.trim() || 'unavailable',
 };

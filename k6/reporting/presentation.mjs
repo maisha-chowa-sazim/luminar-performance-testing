@@ -1,5 +1,6 @@
 import { writeFile, readFile, copyFile } from 'node:fs/promises';
 import path from 'node:path';
+import { testTypeLabel } from './test-type.mjs';
 
 const esc = value => String(value ?? 'N/A').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = (n, digits = 2) => Number.isFinite(n) ? n.toLocaleString('en-US', { maximumFractionDigits: digits }) : 'N/A';
@@ -10,15 +11,13 @@ function reviewSections(m, esc, table) {
     const review = m.metadata.review || {};
     const rows = values => values.map(row => row.map(esc));
     const objective = review.objective || (m.role ? `Characterize Slice 1 at ${m.config.total} configured users and identify latency, failure, and receipt-integrity problems for developer action.` : `Evaluate scenario ${m.metadata.scenario || 'not recorded'} against its configured checks and thresholds.`);
-    const type = review.testType || (m.role ? (m.config.maxWorkflowsPerVU === 1 ? 'Bounded role smoke' : 'Concurrent-role load') : 'Scenario-defined; confirm test intent');
+    const type = testTypeLabel(m.metadata);
     const context = `<section><h2>Objectives, scope, and test type</h2>${table(['Field', 'Recorded context'], rows([
         ['Objective', objective], ['Test type executed', `${type}; configured-rule outcome: ${m.status}`],
         ['Scope', review.scope || (m.role ? 'Style, techpack/uploads, sample, BOM, costing, purchase order, work order, approval/supplier handoff, GRN and receipt verification.' : 'See scenario implementation.')],
         ['Throughput acceptance target', 'No RPS acceptance target is configured for the role workload. Observed RPS is descriptive.'],
     ]))}</section>`;
-    const findings = (Array.isArray(review.findings) ? review.findings : []).map(f => [f.observation, f.evidence, f.impact, f.rootCause || 'Unconfirmed', f.recommendation]);
-    const analysis = `<section><h2>Bottleneck analysis</h2>${table(['Observation', 'Evidence', 'Impact', 'Root cause', 'Recommendation'], rows(findings), 'No reviewed bottleneck analysis attached. Slow endpoints are observations; root causes require correlated server evidence.')}</section>`;
-    return { context, analysis };
+    return { context };
 }
 const ruleLabel = row => row.metric.includes('duration')
     ? row.rule.replace(/([<>]=?|==)([0-9.]+)/g, (_, comparator, value) => `${comparator}${fmt(Number(value) / 1000, 3)} s`)
@@ -106,17 +105,29 @@ export function renderHtml(m) {
     const { metadata: meta } = m;
     const badge = value => `<span class="badge ${value === 'PASS' ? 'pass' : value === 'FAIL' ? 'fail' : 'neutral'}">${esc(value)}</span>`;
     const review = reviewSections(m, esc, table);
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Luminar Slice 1 | Performance assessment</title><style>
+    let environmentLabel = 'ENV';
+    try {
+        const hostname = new URL(meta.environment).hostname;
+        if (hostname === 'app.luminarbd.com') environmentLabel = 'PROD ENV';
+        else if (hostname.startsWith('qa.')) environmentLabel = 'QA ENV';
+    } catch { /* Historical metadata may not include a URL. */ }
+    const date = typeof meta.startedAt === 'string' ? meta.startedAt.slice(0, 10) : 'N/A';
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Luminar Slice 1 | ${esc(testTypeLabel(meta))} | Performance assessment</title><style>
 *{box-sizing:border-box}body{margin:0;background:#f1f5f9;color:#0f172a;font:14px/1.6 system-ui,-apple-system,sans-serif}main{max-width:1280px;margin:auto;padding:36px 28px 64px}header{background:#101f36;color:white;border-radius:18px;padding:32px;margin-bottom:24px}header p{color:#cbd5e1;margin:8px 0}.eyebrow{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#7dd3fc}h1{font-size:32px;letter-spacing:-1px;margin:8px 0}h2{font-size:19px;margin:0 0 16px}h3{font-size:14px;margin:0 0 8px}.verdict{font-size:18px;color:white!important;max-width:850px}a{color:#2563eb}header a{color:#bae6fd}.badge{display:inline-block;font-size:11px;font-weight:750;letter-spacing:.5px;border-radius:6px;padding:4px 9px}.pass{background:#dcfce7;color:#166534}.fail{background:#fee2e2;color:#991b1b}.neutral{background:#e2e8f0;color:#334155}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}.card,section{background:white;border:1px solid #e2e8f0;border-radius:12px;padding:22px}.card .label{font-size:12px;color:#475569}.card .value{font-size:27px;font-weight:750;margin:7px 0;letter-spacing:-.7px}.hint,.muted{font-size:12px;color:#64748b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.grid section{min-width:0}section{margin-bottom:20px}svg{display:block;width:100%;height:auto}table{width:100%;border-collapse:collapse;font-size:12px;text-align:left;font-variant-numeric:tabular-nums}th{background:#f8fafc;color:#475569;font-size:10px;text-transform:uppercase;letter-spacing:.5px}td,th{padding:11px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top}td:first-child{overflow-wrap:anywhere}tr:last-child td{border-bottom:0}.table-scroll{overflow-x:auto}.facts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.fact{padding:14px;background:#f8fafc;border-radius:8px}.fact strong{display:block;font-size:24px}.insights{display:grid;gap:12px}.insight{border-left:3px solid #38bdf8;padding-left:14px}.actions{display:flex;gap:18px;flex-wrap:wrap;margin-top:18px}footer{color:#64748b;font-size:12px}@media(max-width:800px){main{padding:16px}.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.facts{grid-template-columns:repeat(2,1fr)}h1{font-size:26px}}@media print{body{background:white}main{padding:0}header{print-color-adjust:exact}section,.card{break-inside:avoid}.actions{display:none}}
-</style></head><body><main><header><div class="eyebrow">Luminar ERP · QA performance assessment</div><h1>Luminar Slice 1</h1><p>${esc(meta.startedAt)} · ${esc(meta.environment)}</p><p class="verdict">${esc(m.verdict)}</p><p>Overall <strong>${esc(m.status)}</strong> &nbsp; ${badge(m.status)} &nbsp; Functional ${badge(m.functional)}</p></header>
+</style></head><body><main><header><div class="eyebrow">Luminar ERP · Performance assessment</div><h1>Luminar Slice 1 - ${esc(testTypeLabel(meta))}</h1><p>Date: ${esc(date)}</p><p>${esc(environmentLabel)}: ${esc(meta.environment)}</p><p>Overall <strong>${esc(m.status)}</strong> &nbsp; ${badge(m.status)} &nbsp; Functional ${badge(m.functional)}</p></header>
 <div class="cards">${m.cards.filter((card,index)=>index<6 || card[0].startsWith('Techpack')).map(([label,value,hint])=>`<div class="card"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="hint">${esc(hint)}</div></div>`).join('')}</div>
 ${review.context}
+<section><h2>VU distribution</h2><p class="muted">Configured concurrent VUs by role; these are allocation targets, not measured active-user counts.</p>${m.role ? table(['Role', 'Configured VUs', 'Share'], [
+    ['Merchandiser', fmt(m.config.merchandiser, 0), pct(m.config.merchandiser / m.config.total)],
+    ['Inventory', fmt(m.config.inventory, 0), pct(m.config.inventory / m.config.total)],
+    ['Total', fmt(m.config.total, 0), '100%'],
+]) : '<p class="muted">Separate Merchandiser and Inventory VU allocation is not configured for this scenario.</p>'}</section>
 <div class="grid"><section><h2>Response-time distribution</h2><p class="muted">${m.role ? `Application API traffic; coordinator and setup authentication excluded.${m.separateTechPack ? ' Techpack requests use separate targets.' : ''}` : 'All HTTP traffic.'} Whole-run percentiles, not a time series.</p>${bars(['med','p(90)','p(95)','p(99)','max'].map((key,i)=>({label:['Median','p90','p95','p99','Maximum'][i],value:m.latency[key],color:i>1?'#ea580c':'#2563eb'})), 'Response time percentiles')}</section><section><h2>QA findings</h2><div class="insights">${m.insights.map(text=>`<div class="insight">${esc(text)}</div>`).join('')}</div>${meta.error ? `<p class="fail">${esc(meta.error)}</p>` : ''}</section></div>
 <section><h2>Slowest endpoints</h2><p class="muted">Observed p95 across at most eight slowest named operations. Endpoint metrics can include setup and upload operations; small samples are not reliable tail estimates.</p>${bars(m.endpoints.slice(0,8).map(row=>({label:row.name,value:row.timing['p(95)']})), 'Slowest endpoint p95')}</section>
 <section><h2>Acceptance gates</h2><p class="muted">${m.thresholds.length - m.failed.length} passed · ${m.failed.length} failed. A gate is a configured pass/fail rule. Exact metric expressions are listed below.</p>${m.failed.length ? table(['Result','Measured area','Observed','Acceptance rule','Action'],m.failed.map(row=>[badge('FAIL'),esc(metricLabel(row.metric)),esc(observedLabel(row)),esc(ruleLabel(row)),esc(actionLabel(row.metric))])) : '<p>No failed acceptance rules recorded.</p>'}<h3>All acceptance rules (${m.thresholds.length})</h3>${table(['Result','Metric','Acceptance rule'],m.thresholds.map(row=>[badge(row.ok?'PASS':'FAIL'),esc(row.metric),esc(ruleLabel(row))]),'No evaluated acceptance targets.')}</section>
 <section><h2>Endpoint evidence</h2><p class="muted">Requests = sample count; Req/s = whole-run requests per elapsed second for this operation; Avg = mean duration; p50 = median duration; p95/p99 = tail durations; Maximum = slowest request; Errors = failed HTTP percentage. Durations exclude human pauses. Endpoint-specific latency gates are not configured; current API and techpack latency gates pool requests within each category.</p>${table(['Operation','Requests','Req/s','Avg','p50','p95','p99','Maximum','Errors'],m.endpoints.map(row=>[esc(row.name),fmt(row.count,0),fmt(row.rate),duration(row.timing.avg),duration(row.timing.med),duration(row.timing['p(95)']),duration(row.timing['p(99)']),duration(row.timing.max),pct(row.failure)]))}</section>
 <section><h2>Errors and response outcomes</h2><p class="muted">Selected application status counts, not a complete status histogram. HTTP 429 means throttling; it does not establish backend saturation. Status 0 indicates no HTTP response. Missing counters are N/A, not zero. Error onset and rate-limit scope require request logs/time-series evidence.</p>${table(['HTTP status','Requests','Share of application requests'],m.errorStatuses.map(row=>[String(row.status),fmt(row.count,0),Number.isFinite(row.count) && m.applicationRequests.count > 0 ? pct(row.count/m.applicationRequests.count) : 'N/A']))}${table(['HTTP response outcome','Avg','p95','p99'],m.responseOutcomes.map(row=>[row.expected?'Expected HTTP response':'Unexpected/failed HTTP response',duration(row.timing.avg),duration(row.timing['p(95)']),duration(row.timing['p(99)'])]))}<p class="muted">Outcome timings pool application API and techpack requests. HTTP outcome is not the same as business correctness. Verified receipt throughput: ${fmt(m.receiptRate)} workflows/s (whole-run rate, includes pacing; N/A when not captured).</p></section>
-${review.analysis}
+
 ${meta.roleFailures?.length ? `<section><h2>Workflow failures</h2>${table(['Step','Category','HTTP','Error code','Record'],meta.roleFailures.map(row=>[esc(row.step),esc(row.kind),esc(row.httpStatus),esc(row.errorCode),esc(row.id)]))}</section>` : ''}
 </main></body></html>`;
 }
@@ -132,7 +143,7 @@ export async function writePresentation(directory, summary, metadata, status) {
     let hasNative=false;
     try {
         const existing=await readFile(dashboard,'utf8');
-        if(!existing.includes('QA performance assessment'))await copyFile(dashboard,native);
+        if(!existing.includes('QA performance assessment') && !existing.includes('<h1>Luminar Slice 1'))await copyFile(dashboard,native);
         await readFile(native);hasNative=true;
     } catch(error) {if(error.code!=='ENOENT')throw error;}
     const html=renderHtml(m);

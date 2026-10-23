@@ -117,7 +117,7 @@ test('k6 loads arrival rate and sequential verification options without network 
 test('business journeys reuse role tokens across iterations without logging in', () => {
     const source = fs.readFileSync('k6/scenarios/full-journey.js', 'utf8');
     const calls = [];
-    const ctx = { FUNCTIONAL_THRESHOLDS: {}, check: () => true,
+    const ctx = { __ENV: {}, testEnvironment: () => null, FUNCTIONAL_THRESHOLDS: {}, check: () => true,
         login: () => { throw new Error('Unexpected login during business workload'); } };
     for (const name of ['createStyle', 'createSample', 'createTechPack', 'createBom', 'createPreCosting',
         'createPurchaseOrder', 'createWorkOrder', 'createReceiveItem', 'approveWorkOrder']) {

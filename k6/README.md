@@ -27,6 +27,38 @@ k6 run k6/scenarios/work-order-and-receive-item-flow.js
 
 This project reads values from the workspace .env file and exposes them to k6 via `__ENV`.
 
+Select QA or production explicitly in the command:
+
+```bash
+TEST_ENV=qa npm run test:roles:smoke
+TEST_ENV=prod npm run test:roles:smoke
+```
+
+`TEST_ENV=qa` loads only `.env.qa` and uses `k6/data/bom.json` for the BOM.
+`TEST_ENV=prod` loads only `.env.prod` and uses `k6/data/prod/bom.json`.
+Without `TEST_ENV`, the runner keeps the existing `.env` and QA BOM behavior.
+Set `TEST_ENV` in the command, not inside these files. Exported shell variables
+override file values; use a fresh shell or unset previously exported tenant variables
+when switching environments. Each environment file must contain its own base URL,
+tenant IDs, garment-size-template ID, payment provider, and role credentials.
+`k6/data/purchase.json` holds QA purchase-order data; production uses
+`k6/data/prod/purchase.json`. Production brand and buyer-department IDs are
+fixture-specific. Buyer and payment-provider IDs come from the environment,
+PO numbers are unique, and shipment dates use today plus 30 days.
+Production work orders use `k6/data/prod/work-order.json`; QA uses
+`k6/data/work-order.json`. Both fixtures resolve item and supplier IDs from
+`LUMINAR_MEASURABLE_ITEM_ID` and `LUMINAR_SUPPLIER_ID` in the selected
+environment file (`.env.qa`, `.env.prod`, or the default `.env`).
+A measurable item is a material/accessory, distinct from the garment-size template.
+Reservation, purchase-order, style, color, and material
+quantities are resolved from the current workflow. Production receipt fixtures use
+`k6/data/prod/receive-item.json`; QA keeps `k6/data/recieve-item.json`.
+The production full journey maps each receipt row to a newly created work-order
+variant and uses the fixture partial quantities (400 M, 200 L). Role load tests
+build receipts directly from API work-order data and receive the full quantities,
+independently of receipt fixtures. Other data fixtures remain shared.
+Style and combo IDs for BOM creation always come from the current workflow.
+
 Example values:
 
 ```bash
@@ -37,6 +69,7 @@ MERCHANDISER_PASSWORD=<set-locally>
 LUMINAR_FACTORY_ID=2f7e5d9a-3c1b-4e8f-9a6d-1b2c3d4e5f60
 LUMINAR_ORGANIZATION_ID=0e3c4b48-c231-4252-9be7-aafb4a647d05
 LUMINAR_BUYER_ID=6a8e1b95-8e8d-4fee-b7ed-93703577d6d9
+LUMINAR_GARMENT_SIZE_TEMPLATE_ID=<garment-size-template-uuid-from-the-same-tenant>
 LUMINAR_STYLE_ID=<existing-style-uuid>
 ```
 
@@ -51,7 +84,7 @@ k6 run k6/scenarios/sample-smoke.js
 
 ## Seed data and cleanup
 
-Run these scenarios only against a disposable QA environment. Keep `BASE_URL`, factory, organization, buyer, and role accounts aligned to the same tenant. Before running, verify that the buyer and garment-size template in `style.json`, the measurable items in `bom.json`, and the measurable items, suppliers, purchase-order references, and variants in `work-order.json` exist and are active in that tenant. The tech-pack metadata filenames must match files under `data/techpack/`.
+These scenarios create business records; use a disposable QA environment for routine runs. Keep `BASE_URL`, factory, organization, buyer, and role accounts aligned to the same tenant. Before running, verify the buyer and garment-size-template environment values, the measurable items in the selected BOM fixture, and the measurable items and suppliers in `work-order.json` exist and are active in that tenant. The tech-pack metadata filenames must match files under `data/techpack/`.
 
 These scenarios create persistent records and upload objects. The API currently exposes style soft-delete and tech-pack deletion, but no complete delete workflow for BOMs, samples, costings, purchase orders, work orders, or GRNs. For a full reset, restore the disposable QA database to its approved seeded snapshot and clear the test tech-pack object prefix using the environment's object-storage cleanup/lifecycle process. Do not treat reruns as cleanup; without that reset, duplicate records and accumulated files are expected.
 

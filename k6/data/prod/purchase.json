@@ -1,0 +1,39 @@
+{
+  "currency": "USD",
+  "brandId": "52a7cf83-9067-4663-991b-bb74528fff84",
+  "buyerDepartmentId": "7e1c52f9-97b3-40a2-8611-f4188609d190",
+  "season": "Autumn",
+  "shipmentTerms": "CIF",
+  "paymentTerms": "LC",
+  "teamId": null,
+  "productionFlow": [
+    "CUTTING",
+    "SEWING",
+    "FINISHING",
+    "PACKING"
+  ],
+  "shipments": [
+    {
+      "shipmentMode": "AIR",
+      "shipmentDate": {
+        "daysFromToday": 30,
+        "utcOffsetMinutes": 360
+      },
+      "portOfDestination": "Singapore",
+      "deliveryNumber": null,
+      "orderItems": [
+        {
+          "size": "M",
+          "quantity": 500,
+          "unitPrice": 11
+        },
+        {
+          "size": "L",
+          "quantity": 500,
+          "unitPrice": 11
+        }
+      ]
+    }
+  ],
+  "status": "PENDING_APPROVAL"
+}

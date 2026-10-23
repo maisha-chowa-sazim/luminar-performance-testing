@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { presentationModel, renderHtml } from '../reporting/presentation.mjs';
 import { writeReports } from '../reporting/report.mjs';
+import { runTestType, testType, testTypeSlug, testTypeLabel } from '../reporting/test-type.mjs';
 
 const metadata = { scenario:'load-roles', exitCode:99, roleConfiguration:{total:2,merchandiser:1,inventory:1,completion:.99,apiP95:2000,apiP99:5000,httpFailure:.01},roleHandoff:{attempted:1,created:1,received:1,failed:0,pending:0,duplicateAttempts:0} };
 const summary = { metrics: {
@@ -15,6 +16,25 @@ const summary = { metrics: {
     e2e_success:{values:{rate:1},thresholds:{'rate>=0.99':{ok:true}}},
 },root_group:{checks:[{name:'synthetic <check>',passes:1,fails:0}]} };
 
+test('test labels distinguish smoke and named loads in folders and report headers', () => {
+    for (const [scenario, command, label, heading] of [
+        ['smoke', 'test:smoke', 'smoke', 'Smoke Test : 2 VU'],
+        ['load-roles', 'test:roles:smoke', 'roles:smoke', 'Smoke Test : 2 VU'],
+        ['load-5-users', 'test:load:5', 'load:5', 'LoadTest : 5 VU'],
+        ['load-10-users', 'test:load:10', 'load:10', 'LoadTest : 10 VU'],
+    ]) {
+        const type = runTestType(scenario, { npm_lifecycle_event: command });
+        assert.equal(type, label);
+        assert.equal(testTypeSlug(type), label.replaceAll(':', '-'));
+        const html = renderHtml(presentationModel(summary, { ...metadata, scenario, testType: type }, 'FAIL'));
+        assert.ok(html.includes(`<h1>Luminar Slice 1 - ${heading}</h1>`));
+        assert.doesNotMatch(html, /Bottleneck analysis/);
+    }
+    assert.equal(testType({ scenario: 'load-10-users' }), 'load:10');
+    assert.equal(testType({ scenario: 'load-roles', roleConfiguration: { maxWorkflowsPerVU: 1 } }), 'roles:smoke');
+    assert.equal(runTestType('smoke', { npm_lifecycle_event: 'test:performance' }), 'smoke');
+});
+
 test('visual assessment separates successful receiving from failed application latency', () => {
     const model=presentationModel(summary,metadata,'FAIL');
     assert.equal(model.functional,'PASS');
@@ -23,8 +43,8 @@ test('visual assessment separates successful receiving from failed application l
     assert.equal(model.failed.length,1);
     assert.equal(model.thresholds[0].ok,false);
     const html=renderHtml(model);
-    assert.match(html,/Receiving completed successfully/);
-    assert.match(html,/<h1>Luminar Slice 1<\/h1>/);
+    assert.doesNotMatch(html, /<p class="verdict">/);
+    assert.match(html,/<h1>Luminar Slice 1 - LoadTest : 2 VU<\/h1>/);
     assert.doesNotMatch(html,/3,000 ms/);
     assert.match(html,/Response-time distribution/);
     assert.match(html,/<svg role="img"/);
@@ -95,7 +115,9 @@ test('simplified template retains throttling evidence and removes requested sect
     current.metrics['http_req_duration{traffic:application,expected_response:false}'] = { values: { avg: 20, 'p(95)':30 } };
     const html = renderHtml(presentationModel(current, metadata, 'FAIL'));
     assert.match(html,/<td>429<\/td><td>4<\/td><td>5%<\/td>/);
-    assert.match(html,/No reviewed bottleneck analysis/);
+    assert.doesNotMatch(html,/Bottleneck analysis|No reviewed bottleneck analysis/);
+    assert.match(html, /VU distribution/);
+    assert.match(html, /<td>Merchandiser<\/td><td>1<\/td><td>50%<\/td>/);
     assert.doesNotMatch(html, /<\/?(?:details|summary)\b/);
     assert.match(html, /Requests per second \(RPS\)/);
     for (const removed of ['Appendix: run configuration and provenance', 'Functional check evidence', 'Recommendations, owners, and retest', 'Measurement validity and baseline', 'Decision summary', 'Environment and workload', 'Supporting counts and load', 'Load and measurement context', 'Open original k6 time-series dashboard', 'Summary data', 'Handoff ledger', 'Workflow reconciliation', 'Metric definitions', 'Other approvals, QC', 'Stakeholder sign-off is not recorded.', 'Generated from saved k6 summary', 'Application requests per second']) {
@@ -117,7 +139,7 @@ test('analyst review is escaped, optional, and cannot override measured acceptan
         assert.match(html,/&lt;script&gt;example&lt;\/script&gt;/);
         assert.doesNotMatch(html,/<script>example/);
         assert.doesNotMatch(html,/qa-build-123/);
-        assert.match(html,/Unconfirmed/);
+        assert.doesNotMatch(html,/Slow receipt|trace-123/);
         assert.doesNotMatch(html,/Assigned developer/);
         assert.equal(summary.metrics['http_req_duration{traffic:application}'].thresholds['p(95)<2000'].ok,false);
     } finally { await rm(directory,{recursive:true,force:true}); }
@@ -138,4 +160,16 @@ test('explicit revised response target reassesses the report without changing sa
         assert.equal(original.metrics['http_req_duration{traffic:application,workload:api}'].thresholds['p(99)<5000'].ok,true);
         assert.equal(metadata.roleConfiguration.apiP99,5000);
     } finally { await rm(directory,{recursive:true,force:true}); }
+});
+
+
+test('header shows date and production environment without the verdict sentence', () => {
+    const html = renderHtml(presentationModel(summary, { ...metadata,
+        testType: 'roles:smoke', startedAt: '2026-10-23T07:22:16.926Z', environment: 'https://app.luminarbd.com',
+    }, 'FAIL'));
+    assert.match(html, /<h1>Luminar Slice 1 - Smoke Test : 2 VU<\/h1>/);
+    assert.match(html, /<p>Date: 2026-10-23<\/p>/);
+    assert.match(html, /<p>PROD ENV: https:\/\/app.luminarbd.com<\/p>/);
+    const header = html.match(/<header>[\s\S]*?<\/header>/)[0];
+    assert.doesNotMatch(header, /Receiving completed successfully|Performance acceptance targets were missed/);
 });

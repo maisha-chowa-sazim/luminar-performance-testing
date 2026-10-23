@@ -2,12 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { workOrderFixturePath } from '../config/environment.mjs';
 
 const fixture = JSON.parse(readFileSync('k6/data/work-order.json', 'utf8'));
-function harness(data = fixture) {
+function harness(data = fixture, env = { LUMINAR_BUYER_ID: 'buyer', LUMINAR_MEASURABLE_ITEM_ID: 'qa-item', LUMINAR_SUPPLIER_ID: 'qa-supplier' }) {
     const requests = [];
     const ctx = vm.createContext({
-        open: () => JSON.stringify(data), requiredEnvValue: () => 'buyer',
+        __ENV: {}, workOrderFixturePath, open: () => JSON.stringify(data), requiredEnvValue: key => { if (!env[key]?.trim()) throw new Error(`${key} is required`); return env[key].trim(); },
         getApiUrl: path => path, tenantHeaders: () => ({}), console: { error() {} },
         check: (value, rules) => Object.values(rules).every(rule => rule(value)),
         http: { get: url => {
@@ -34,6 +35,8 @@ test('work-order creation sends its own fixture currency and fresh dependent IDs
     assert.equal(h.requests[1].url, '/api/v1/work-orders/reserve-number');
     const { payload } = h.requests[2];
     assert.equal(payload.currency, 'USD');
+    assert.equal(payload.items[0].measurableItemId, 'qa-item');
+    assert.equal(payload.items[0].supplierId, 'qa-supplier');
     assert.equal(payload.reservationId, 'fresh-reservation');
     assert.equal(payload.buyerId, 'buyer');
     for (const item of payload.items) for (const variant of item.variants) {
@@ -44,7 +47,9 @@ test('work-order creation sends its own fixture currency and fresh dependent IDs
     }
     assert.deepEqual(Array.from(payload.items[0].variants, value => value.garmentsQuantity), ['400', '200']);
     assert.deepEqual(Array.from(payload.items[0].variants, value => value.quantity), ['200', '100']);
-    assert.equal(fixture.reservationId, 'c5f7a4c0-5dfb-4d7d-98fb-8d1b6f8e3871');
+    assert.equal('reservationId' in fixture, false);
+    assert.ok(fixture.items.every(item => item.variants.every(variant =>
+        !['measurableItemVariantId', 'purchaseOrderId', 'variantGroupId', 'styleId'].some(key => key in variant))));
 });
 
 test('work-order rows reject unrelated styles, missing sizes, and ambiguous colors', () => {
@@ -64,5 +69,34 @@ test('missing or unsupported work-order currency fails before any reservation or
         const h = harness({ ...fixture, currency });
         assert.throws(() => h.ctx.createWorkOrder('synthetic-token', 'purchase', 'style'), /supported work-order currency/);
         assert.equal(h.requests.length, 0);
+    }
+});
+
+
+test('production work order retains tenant items and calculates fresh linked quantities', () => {
+    const prod = JSON.parse(readFileSync('k6/data/prod/work-order.json', 'utf8'));
+    const h = harness(prod, { LUMINAR_BUYER_ID: 'buyer', LUMINAR_MEASURABLE_ITEM_ID: 'environment-item', LUMINAR_SUPPLIER_ID: 'environment-supplier' });
+    h.ctx.createWorkOrder('token', 'created-purchase', 'created-style');
+    const payload = h.requests[2].payload;
+    assert.equal(payload.reservationId, 'fresh-reservation');
+    assert.equal(payload.items[0].measurableItemId, 'environment-item');
+    assert.equal(payload.items[0].supplierId, 'environment-supplier');
+    assert.equal('supplierIdEnv' in payload.items[0], false);
+    assert.equal('measurableItemIdEnv' in payload.items[0], false);
+    assert.equal(payload.items[0].unitPrice, '1.00');
+    assert.deepEqual(payload.items[0].variants.map(v => v.quantity), ['400', '200']);
+    assert.ok(payload.items[0].variants.every(v => v.purchaseOrderId === 'created-purchase' && v.styleId === 'created-style' && !v.variantGroupId));
+});
+
+
+test('missing QA or production item or supplier fails before any HTTP request', () => {
+    for (const data of [fixture, JSON.parse(readFileSync('k6/data/prod/work-order.json', 'utf8'))]) {
+        for (const key of ['LUMINAR_MEASURABLE_ITEM_ID', 'LUMINAR_SUPPLIER_ID']) {
+            const env = { LUMINAR_BUYER_ID: 'buyer', LUMINAR_MEASURABLE_ITEM_ID: 'item', LUMINAR_SUPPLIER_ID: 'supplier' };
+            delete env[key];
+            const h = harness(data, env);
+            assert.throws(() => h.ctx.createWorkOrder('token', 'purchase', 'style'), new RegExp(key));
+            assert.equal(h.requests.length, 0);
+        }
     }
 });

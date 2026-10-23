@@ -13,6 +13,7 @@ export function buildStylePayload(runId = '') {
         ...base,
         name: `${base.name} ${runId ? `${runId} ` : ''}${suffix}`,
         buyerId: requiredEnvValue('LUMINAR_BUYER_ID'),
+        garmentSizeTemplateId: requiredEnvValue('LUMINAR_GARMENT_SIZE_TEMPLATE_ID'),
     };
 }
 

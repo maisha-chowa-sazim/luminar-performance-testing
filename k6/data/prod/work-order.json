@@ -1,0 +1,36 @@
+{
+  "currency": "USD",
+  "items": [
+    {
+      "measurableItemIdEnv": "LUMINAR_MEASURABLE_ITEM_ID",
+      "supplierIdEnv": "LUMINAR_SUPPLIER_ID",
+      "variantType": "",
+      "unitPrice": "1.00",
+      "variants": [
+        {
+          "variantValue": "M",
+          "quantity": "500",
+          "garmentSizes": [
+            "M"
+          ],
+          "garmentColor": "Black",
+          "garmentsQuantity": "500",
+          "consumption": "1.0000",
+          "wastagePercentage": "0.00"
+        },
+        {
+          "variantValue": "L",
+          "quantity": "500",
+          "garmentSizes": [
+            "L"
+          ],
+          "garmentColor": "Black",
+          "garmentsQuantity": "500",
+          "consumption": "1.0000",
+          "wastagePercentage": "0.00"
+        }
+      ]
+    }
+  ],
+  "isDraft": false
+}

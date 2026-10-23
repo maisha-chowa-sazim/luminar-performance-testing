@@ -3,15 +3,16 @@ import http from 'k6/http';
 import { check } from 'k6';
 import { requiredEnvValue } from '../helpers/http.js';
 import { shipmentDate } from '../helpers/shipment-date.mjs';
+import { purchaseFixturePath } from '../config/environment.mjs';
 
-const purchaseFixture = JSON.parse(open('../data/purchase.json'));
+const purchaseFixture = JSON.parse(open(purchaseFixturePath(__ENV)));
 
 export function buildPurchaseOrderPayload(styleIdOverride = '', styleComboIdOverride = '', runId = '') {
     const styleId = styleIdOverride || requiredEnvValue('LUMINAR_STYLE_ID');
     const buyerId = requiredEnvValue('LUMINAR_BUYER_ID');
     const currency = purchaseFixture.currency;
     if (!['USD', 'BDT', 'EUR', 'CNY', 'INR'].includes(currency)) {
-        throw new Error('k6/data/purchase.json must define a supported purchase-order currency');
+        throw new Error('Selected purchase fixture must define a supported purchase-order currency');
     }
 
     if (styleIdOverride && !styleComboIdOverride) {

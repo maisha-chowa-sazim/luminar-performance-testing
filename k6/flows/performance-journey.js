@@ -17,6 +17,7 @@ export function setup() {
         'LUMINAR_FACTORY_ID',
         'LUMINAR_ORGANIZATION_ID',
         'LUMINAR_BUYER_ID',
+        'LUMINAR_GARMENT_SIZE_TEMPLATE_ID',
         'LUMINAR_PAYMENT_PROVIDER_ID',
     ]) {
         requiredEnvValue(key);

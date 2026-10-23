@@ -1,8 +1,9 @@
 import http from 'k6/http';
 import { check } from 'k6';
+import { workOrderFixturePath } from '../config/environment.mjs';
 import { getApiUrl, requiredEnvValue, tenantHeaders } from '../helpers/http.js';
 
-const workOrderFixture = JSON.parse(open('../data/work-order.json'));
+const workOrderFixture = JSON.parse(open(workOrderFixturePath(__ENV)));
 
 export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', styleId = '', purchaseOrder = null) {
     const payload = JSON.parse(JSON.stringify(workOrderFixture));
@@ -18,8 +19,10 @@ export function buildWorkOrderPayload(reservationId, purchaseOrderId = '', style
         ...payload,
         reservationId,
         buyerId: requiredEnvValue('LUMINAR_BUYER_ID'),
-        items: payload.items.map((item) => ({
+        items: payload.items.map(({ measurableItemIdEnv, supplierIdEnv, ...item }) => ({
             ...item,
+            ...(measurableItemIdEnv ? { measurableItemId: requiredEnvValue(measurableItemIdEnv) } : {}),
+            ...(supplierIdEnv ? { supplierId: requiredEnvValue(supplierIdEnv) } : {}),
             variants: item.variants.map((variant) => {
                 if (!linked) return variant;
                 const sizes = variant.garmentSizes;

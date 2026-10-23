@@ -1,8 +1,9 @@
 import http from 'k6/http';
 import { check } from 'k6';
 import { getApiUrl, tenantHeaders } from '../helpers/http.js';
+import { bomFixturePath } from '../config/environment.mjs';
 
-const bomFixture = JSON.parse(open('../data/bom.json'));
+const bomFixture = JSON.parse(open(import.meta.resolve(bomFixturePath(__ENV))));
 
 export function buildBomPayload(styleComboId = '') {
     const payload = JSON.parse(JSON.stringify(bomFixture));
